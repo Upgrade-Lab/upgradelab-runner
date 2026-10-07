@@ -2,7 +2,10 @@
 
 use crate::backend::{Backend, RunnerError};
 use crate::report::*;
-use crate::scenario::{ErrorClass, Expect, ExpectedValues, Invariant, OpRejected, OpSucceeded, Phase, Preserved, Scenario, Shapes, StableAcrossOp, SumEquals};
+use crate::scenario::{
+    ErrorClass, Expect, ExpectedValues, Invariant, OpRejected, OpSucceeded, Phase, Preserved, Scenario, Shapes,
+    StableAcrossOp, SumEquals,
+};
 use crate::values::hex_encode;
 use serde_json::{json, Value as Json};
 use sha2::{Digest, Sha256};
@@ -52,12 +55,12 @@ pub fn run(scenario: &Scenario, backend: &mut dyn Backend, meta: RunMeta) -> Res
     scenario.validate().map_err(|e| RunnerError(e.0))?;
     let category = backend.category();
     let mut executed = backend.setup_steps();
-    let mut seq = executed.len() as u32;
     let mut checkpoints: BTreeMap<String, Checkpoint> = BTreeMap::new();
     let mut traces: BTreeMap<String, OpTrace> = BTreeMap::new();
     let ids = identities_for_render(scenario, &meta);
 
     for op in &scenario.ops {
+        let seq = (executed.len() + 1) as u32;
         let before = read_all(backend, scenario);
         let exec_before = backend.executable_hash();
         let rec = backend.invoke(op)?;
@@ -65,7 +68,6 @@ pub fn run(scenario: &Scenario, backend: &mut dyn Backend, meta: RunMeta) -> Res
         let after = read_all(backend, scenario);
         checkpoints.insert(format!("before:{}", op.id), before);
         checkpoints.insert(format!("after:{}", op.id), after);
-        seq += 1;
         let ok = rec.outcome.status == "ok";
         let expectation = match op.expect {
             Expect::Any => "any",
@@ -124,7 +126,11 @@ pub fn run(scenario: &Scenario, backend: &mut dyn Backend, meta: RunMeta) -> Res
         report_version: REPORT_VERSION,
         kind: REPORT_KIND.into(),
         tool: meta.tool,
-        scenario: ScenarioInfo { name: scenario.name.clone(), sha256: meta.scenario_sha256, definition: scenario.clone() },
+        scenario: ScenarioInfo {
+            name: scenario.name.clone(),
+            sha256: meta.scenario_sha256,
+            definition: scenario.clone(),
+        },
         wasm: meta.wasm,
         categories: meta.categories,
         executed_ops: executed,
@@ -188,13 +194,23 @@ fn builtin_results(
     let t = &traces[&up.id];
     let outcome_ok = executed.iter().find(|e| e.id == up.id).map(|e| e.outcome.status == "ok").unwrap_or(false);
     let (status, summary) = match (&t.exec_before, &t.exec_after) {
+        _ if meta.wasm.old.sha256 == meta.wasm.new.sha256 => {
+            (Status::Fail, "the old and new WASM are byte-identical, so nothing was upgraded".to_string())
+        }
         (Some(b), Some(a)) => {
             if outcome_ok && *b == meta.wasm.old.sha256 && *a == meta.wasm.new.sha256 {
                 (Status::Pass, format!("executable changed from {} to {}", short(b), short(a)))
             } else if !outcome_ok {
                 (Status::Fail, "the upgrade operation was rejected or trapped".to_string())
             } else {
-                (Status::Fail, format!("executable is {} after the upgrade, expected the new WASM {}", short(a), short(&meta.wasm.new.sha256)))
+                (
+                    Status::Fail,
+                    format!(
+                        "executable is {} after the upgrade, expected the new WASM {}",
+                        short(a),
+                        short(&meta.wasm.new.sha256)
+                    ),
+                )
             }
         }
         _ => (Status::Inconclusive, "the contract's executable hash could not be read in this mode".to_string()),
@@ -223,7 +239,11 @@ fn builtin_results(
         kind: "builtin".into(),
         status: if unmet.is_empty() { Status::Pass } else { Status::Fail },
         category: category.into(),
-        summary: if unmet.is_empty() { "all expected-ok post-upgrade operations succeeded".into() } else { format!("failed unexpectedly: {}", unmet.join(", ")) },
+        summary: if unmet.is_empty() {
+            "all expected-ok post-upgrade operations succeeded".into()
+        } else {
+            format!("failed unexpectedly: {}", unmet.join(", "))
+        },
         evidence: json!({ "failedOps": unmet }),
         builtin: true,
     });
@@ -305,7 +325,11 @@ fn evaluate(
                 rows.push(json!({ "probe": p, "from": x.value, "to": y.value, "equal": eq }));
             }
             let st = if diffs.is_empty() { Status::Pass } else { Status::Fail };
-            let summary = if diffs.is_empty() { format!("{} probe(s) identical between {from} and {to}", rows.len()) } else { diffs.join("; ") };
+            let summary = if diffs.is_empty() {
+                format!("{} probe(s) identical between {from} and {to}", rows.len())
+            } else {
+                diffs.join("; ")
+            };
             (st, summary, json!({ "from": from, "to": to, "rows": rows }))
         }
         Invariant::SumEquals(SumEquals { at, parts, total, .. }) => {
@@ -334,8 +358,16 @@ fn evaluate(
                 return inconclusive(vec![format!("{total} @ {at}: not an i128 value")]);
             };
             let ok = sum == t;
-            let summary = if ok { format!("sum of {} parts is {sum}, equal to {total} ({t})", parts.len()) } else { format!("sum of {} parts is {sum} but {total} is {t} (difference {})", parts.len(), t - sum) };
-            (if ok { Status::Pass } else { Status::Fail }, summary, json!({ "at": at, "parts": rows, "sum": sum.to_string(), "total": { "probe": total, "value": t.to_string() } }))
+            let summary = if ok {
+                format!("sum of {} parts is {sum}, equal to {total} ({t})", parts.len())
+            } else {
+                format!("sum of {} parts is {sum} but {total} is {t} (difference {})", parts.len(), t - sum)
+            };
+            (
+                if ok { Status::Pass } else { Status::Fail },
+                summary,
+                json!({ "at": at, "parts": rows, "sum": sum.to_string(), "total": { "probe": total, "value": t.to_string() } }),
+            )
         }
         Invariant::ExpectedValues(ExpectedValues { at, expect, .. }) => {
             let ids: Vec<&str> = expect.keys().map(|s| s.as_str()).collect();
@@ -353,7 +385,11 @@ fn evaluate(
                 }
                 rows.push(json!({ "probe": p, "expected": want, "actual": x.value, "equal": eq }));
             }
-            let summary = if diffs.is_empty() { format!("{} value(s) match expectations at {at}", rows.len()) } else { diffs.join("; ") };
+            let summary = if diffs.is_empty() {
+                format!("{} value(s) match expectations at {at}", rows.len())
+            } else {
+                diffs.join("; ")
+            };
             (if diffs.is_empty() { Status::Pass } else { Status::Fail }, summary, json!({ "at": at, "rows": rows }))
         }
         Invariant::Shapes(Shapes { at, expect, .. }) => {
@@ -372,7 +408,11 @@ fn evaluate(
                 }
                 rows.push(json!({ "probe": p, "expected": want, "actual": got, "value": x.value }));
             }
-            let summary = if diffs.is_empty() { format!("{} storage shape(s) as expected at {at}", rows.len()) } else { diffs.join("; ") };
+            let summary = if diffs.is_empty() {
+                format!("{} storage shape(s) as expected at {at}", rows.len())
+            } else {
+                diffs.join("; ")
+            };
             (if diffs.is_empty() { Status::Pass } else { Status::Fail }, summary, json!({ "at": at, "rows": rows }))
         }
         Invariant::StableAcrossOp(StableAcrossOp { op, probes, .. }) => {
@@ -397,8 +437,20 @@ fn evaluate(
                 }
                 rows.push(json!({ "probe": p, "before": x.value, "after": y.value, "equal": eq }));
             }
-            let summary = if diffs.is_empty() { format!("{} probe(s) unchanged across `{op}` (the call {})", rows.len(), if outcome == "ok" { "succeeded" } else { "was rejected" }) } else { format!("`{op}` changed state: {}", diffs.join("; ")) };
-            (if diffs.is_empty() { Status::Pass } else { Status::Fail }, summary, json!({ "op": op, "opOutcome": outcome, "rows": rows }))
+            let summary = if diffs.is_empty() {
+                format!(
+                    "{} probe(s) unchanged across `{op}` (the call {})",
+                    rows.len(),
+                    if outcome == "ok" { "succeeded" } else { "was rejected" }
+                )
+            } else {
+                format!("`{op}` changed state: {}", diffs.join("; "))
+            };
+            (
+                if diffs.is_empty() { Status::Pass } else { Status::Fail },
+                summary,
+                json!({ "op": op, "opOutcome": outcome, "rows": rows }),
+            )
         }
         Invariant::OpRejected(OpRejected { id, op, class, .. }) => {
             let e = executed.iter().find(|e| e.id == *op).expect("validated");
@@ -424,21 +476,54 @@ fn evaluate(
                 executable_unchanged: unchanged,
             });
             let (st, summary) = if !rejected {
-                (Status::Fail, format!("`{op}` was ACCEPTED (signers: {}); it should have been rejected", if e.signers.is_empty() { "none".to_string() } else { e.signers.join(", ") }))
+                (
+                    Status::Fail,
+                    format!(
+                        "`{op}` was ACCEPTED (signers: {}); it should have been rejected",
+                        if e.signers.is_empty() { "none".to_string() } else { e.signers.join(", ") }
+                    ),
+                )
             } else if !class_ok {
                 (Status::Fail, format!("`{op}` was rejected, but as {:?} instead of the expected class", err_class))
             } else if unchanged == Some(false) {
                 (Status::Fail, format!("`{op}` was rejected yet the executable changed"))
             } else {
                 let er = e.outcome.error.as_ref().unwrap();
-                (Status::Pass, format!("`{op}` rejected ({} {}){}", er.class, er.host_error, if unchanged == Some(true) { "; executable unchanged" } else { "; executable hash not readable in this mode" }))
+                (
+                    Status::Pass,
+                    format!(
+                        "`{op}` rejected ({} {}){}",
+                        er.class,
+                        er.host_error,
+                        if unchanged == Some(true) {
+                            "; executable unchanged"
+                        } else {
+                            "; executable hash not readable in this mode"
+                        }
+                    ),
+                )
             };
-            (st, summary, json!({ "op": op, "signers": e.signers, "outcome": e.outcome, "executableBefore": t.exec_before, "executableAfter": t.exec_after }))
+            (
+                st,
+                summary,
+                json!({ "op": op, "signers": e.signers, "outcome": e.outcome, "executableBefore": t.exec_before, "executableAfter": t.exec_after }),
+            )
         }
         Invariant::OpSucceeded(OpSucceeded { op, .. }) => {
             let e = executed.iter().find(|e| e.id == *op).expect("validated");
             let ok = e.outcome.status == "ok";
-            (if ok { Status::Pass } else { Status::Fail }, if ok { format!("`{op}` succeeded") } else { format!("`{op}` failed: {}", e.outcome.error.as_ref().map(|x| format!("{} {}", x.class, x.host_error)).unwrap_or_default()) }, json!({ "op": op, "outcome": e.outcome }))
+            (
+                if ok { Status::Pass } else { Status::Fail },
+                if ok {
+                    format!("`{op}` succeeded")
+                } else {
+                    format!(
+                        "`{op}` failed: {}",
+                        e.outcome.error.as_ref().map(|x| format!("{} {}", x.class, x.host_error)).unwrap_or_default()
+                    )
+                },
+                json!({ "op": op, "outcome": e.outcome }),
+            )
         }
     }
 }

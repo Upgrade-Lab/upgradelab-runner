@@ -97,7 +97,13 @@ fn main() -> ExitCode {
     let code = match cli.cmd {
         Cmd::Validate { scenario } => match load_scenario(&scenario) {
             Ok(s) => {
-                println!("ok: scenario `{}` ({} ops, {} probes, {} invariants)", s.name, s.ops.len(), s.probes.len(), s.invariants.len());
+                println!(
+                    "ok: scenario `{}` ({} ops, {} probes, {} invariants)",
+                    s.name,
+                    s.ops.len(),
+                    s.probes.len(),
+                    s.invariants.len()
+                );
                 0
             }
             Err(e) => {
@@ -107,7 +113,12 @@ fn main() -> ExitCode {
         },
         Cmd::CheckReport { report } => match load_report(&report) {
             Ok(r) => {
-                println!("ok: report v{} for `{}`, verdict {}", r.report_version, r.scenario.name, r.verdict.status.as_str());
+                println!(
+                    "ok: report v{} for `{}`, verdict {}",
+                    r.report_version,
+                    r.scenario.name,
+                    r.verdict.status.as_str()
+                );
                 0
             }
             Err(e) => {
@@ -156,7 +167,11 @@ fn main() -> ExitCode {
                 Ok((fresh, diffs)) => {
                     let identical = diffs.is_empty() && fresh.to_json() == r.to_json();
                     if identical {
-                        println!("REPRODUCED: re-running `{}` produced an identical report (verdict {}).", r.scenario.name, r.verdict.status.as_str());
+                        println!(
+                            "REPRODUCED: re-running `{}` produced an identical report (verdict {}).",
+                            r.scenario.name,
+                            r.verdict.status.as_str()
+                        );
                         0
                     } else {
                         println!("DIFFERENT: the re-run does not match the report ({} difference(s)):", diffs.len());

@@ -29,5 +29,11 @@ pub fn parse_log(text: &str) -> NativeSummary {
         }
     }
     tests.sort_by(|a, b| a.name.cmp(&b.name));
-    NativeSummary { log_sha256: crate::values::hex_encode(&Sha256::digest(text.as_bytes())), passed, failed, ignored, tests }
+    NativeSummary {
+        log_sha256: crate::values::hex_encode(&Sha256::digest(text.as_bytes())),
+        passed,
+        failed,
+        ignored,
+        tests,
+    }
 }

@@ -4,8 +4,8 @@ use crate::scenario::{Value, WhichWasm};
 use ed25519_dalek::SigningKey;
 use sha2::{Digest, Sha256};
 use soroban_sdk::xdr::{
-    AccountId, Hash, Int128Parts, PublicKey, ScAddress, ScBytes, ScMap, ScString, ScSymbol, ScVal,
-    ScVec, UInt128Parts, Uint256,
+    AccountId, Hash, Int128Parts, PublicKey, ScAddress, ScBytes, ScMap, ScString, ScSymbol, ScVal, ScVec, UInt128Parts,
+    Uint256,
 };
 use std::collections::BTreeMap;
 
@@ -138,19 +138,15 @@ pub fn hex_encode(b: &[u8]) -> String {
 }
 
 pub fn hex_decode(s: &str) -> Result<Vec<u8>, String> {
-    if s.len() % 2 != 0 || !s.chars().all(|c| c.is_ascii_hexdigit()) {
+    if !s.len().is_multiple_of(2) || !s.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err(format!("`{s}` is not valid hex"));
     }
-    (0..s.len() / 2)
-        .map(|i| u8::from_str_radix(&s[2 * i..2 * i + 2], 16).map_err(|e| e.to_string()))
-        .collect()
+    (0..s.len() / 2).map(|i| u8::from_str_radix(&s[2 * i..2 * i + 2], 16).map_err(|e| e.to_string())).collect()
 }
 
 pub fn address_string(a: &ScAddress, names: &BTreeMap<String, String>) -> String {
     let s = match a {
-        ScAddress::Account(AccountId(PublicKey::PublicKeyTypeEd25519(Uint256(b)))) => {
-            ed_strkey(*b)
-        }
+        ScAddress::Account(AccountId(PublicKey::PublicKeyTypeEd25519(Uint256(b)))) => ed_strkey(*b),
         ScAddress::Contract(soroban_sdk::xdr::ContractId(Hash(b))) => contract_strkey(*b),
         other => format!("{other:?}"),
     };

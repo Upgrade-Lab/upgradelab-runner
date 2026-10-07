@@ -152,6 +152,7 @@ pub enum Durability {
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
+#[allow(clippy::large_enum_variant)]
 pub enum Probe {
     /// Read through the contract: call a view function.
     Call(CallProbe),
@@ -367,7 +368,7 @@ fn check_value(v: &Value, accounts: &BTreeSet<&str>, ctx: &str, need_name: bool)
     if v.set_fields() != 1 {
         return err(format!("{ctx}: exactly one value field must be set, found {}", v.set_fields()));
     }
-    if need_name && v.name.as_deref().map_or(true, |n| !is_ident(n)) {
+    if need_name && v.name.as_deref().is_none_or(|n| !is_ident(n)) {
         return err(format!("{ctx}: a `name` (the contract parameter name) is required"));
     }
     if let Some(a) = &v.account {
@@ -430,7 +431,10 @@ impl Scenario {
             if !is_ident(&op.id) || !op_ids.insert(op.id.as_str()) {
                 return err(format!("{ctx}: id is invalid or duplicated"));
             }
-            if op.function.is_empty() || op.function.len() > 32 || !op.function.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            if op.function.is_empty()
+                || op.function.len() > 32
+                || !op.function.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+            {
                 return err(format!("{ctx}: fn must be 1..=32 characters from [A-Za-z0-9_]"));
             }
             let rank = match op.phase {
@@ -480,9 +484,7 @@ impl Scenario {
             }
         }
         let cp_ok = |c: &str| -> bool {
-            c.strip_prefix("before:")
-                .or_else(|| c.strip_prefix("after:"))
-                .map_or(false, |op| op_ids.contains(op))
+            c.strip_prefix("before:").or_else(|| c.strip_prefix("after:")).is_some_and(|op| op_ids.contains(op))
         };
         let mut inv_ids = BTreeSet::new();
         let probe_known = |p: &String, inv: &str| -> Result<(), ScenarioError> {

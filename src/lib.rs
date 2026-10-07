@@ -87,7 +87,8 @@ pub fn run_host(scenario: &Scenario, root: &Path, native_log: Option<&Path>) -> 
     let (new_bytes, new) = read_wasm(root, &scenario.wasm.new)?;
     let native_summary = match native_log {
         Some(p) => {
-            let text = std::fs::read_to_string(p).map_err(|e| RunnerError(format!("cannot read {}: {e}", p.display())))?;
+            let text =
+                std::fs::read_to_string(p).map_err(|e| RunnerError(format!("cannot read {}: {e}", p.display())))?;
             Some(native::parse_log(&text))
         }
         None => None,
@@ -115,7 +116,9 @@ pub fn run_host(scenario: &Scenario, root: &Path, native_log: Option<&Path>) -> 
 /// differs from the old one. An empty list means the report reproduced exactly.
 pub fn replay(report: &Report, root: &Path, native_log: Option<&Path>) -> Result<(Report, Vec<String>), RunnerError> {
     if report.tool.mode != "in-process-host" {
-        return Err(RunnerError("only in-process-host reports can be replayed; testnet reports record a network run".into()));
+        return Err(RunnerError(
+            "only in-process-host reports can be replayed; testnet reports record a network run".into(),
+        ));
     }
     let fresh = run_host(&report.scenario.definition, root, native_log)?;
     let a = serde_json::to_value(report).unwrap();
