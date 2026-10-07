@@ -31,7 +31,8 @@ fn seed_legacy(env: &Env, id: &Address, who: &Address, amount: i128) {
     feature = "broken-lose-balance",
     feature = "broken-double-balance",
     feature = "broken-reinit",
-    feature = "broken-upgrade-auth"
+    feature = "broken-upgrade-auth",
+    feature = "broken-not-idempotent"
 )))]
 mod correct {
     use super::*;

@@ -16,6 +16,7 @@ broken-lose-balance = []
 broken-double-balance = []
 broken-reinit = []
 broken-upgrade-auth = []
+broken-not-idempotent = []
 
 [dependencies]
 soroban-sdk = { workspace = true }

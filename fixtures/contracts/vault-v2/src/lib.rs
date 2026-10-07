@@ -184,6 +184,20 @@ impl VaultV2 {
             .persistent()
             .get(&DataKey::Holders)
             .unwrap_or_else(|| Vec::new(&env));
+        // DEFECT (`broken-not-idempotent`): once the migration has completed, every
+        // further call bumps each account's `deposits` counter again. Balances are
+        // untouched, so only a raw-storage comparison across the repeated call sees it.
+        #[cfg(feature = "broken-not-idempotent")]
+        if env.storage().instance().get::<_, u32>(&DataKey::SchemaVersion) == Some(2) {
+            for who in holders.iter() {
+                if let Some(a) = modern(&env, &who) {
+                    env.storage().persistent().set(
+                        &DataKey::BalanceV2(who.clone()),
+                        &Account { amount: a.amount, deposits: a.deposits + 1 },
+                    );
+                }
+            }
+        }
         let mut converted = 0u32;
         for (i, who) in holders.iter().enumerate() {
             if converted >= limit {
