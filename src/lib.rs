@@ -19,6 +19,12 @@ use scenario::Scenario;
 use sha2::{Digest, Sha256};
 use std::path::{Component, Path};
 
+#[derive(Clone, Copy, clap::ValueEnum)]
+pub enum Format {
+    Text,
+    Json,
+}
+
 pub const RUNNER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const AUTH_ENFORCEMENT_HOST: &str = "Enforced, not mocked: no authorization is present unless a named account signs it. Each call carries SorobanAuthorizationEntry values signed with ed25519 over the standard payload (network id, nonce, expiry, invocation); the host verifies the signature against the account's ledger entry (master weight 1) and consumes the nonce. mock_all_auths and mock_auths are never used. Single-key accounts only.";

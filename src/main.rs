@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use upgradelab::report::{self, Report};
 use upgradelab::scenario::Scenario;
+use upgradelab::Format;
 
 /// Executable Soroban migration rehearsal.
 ///
@@ -15,12 +16,6 @@ use upgradelab::scenario::Scenario;
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
-}
-
-#[derive(Clone, Copy, ValueEnum)]
-enum Format {
-    Text,
-    Json,
 }
 
 #[derive(Clone, Copy, ValueEnum)]

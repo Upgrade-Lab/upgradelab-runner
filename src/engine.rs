@@ -21,7 +21,7 @@ pub const LIMITS_HOST: &[&str] = &[
 
 pub const LIMITS_TESTNET: &[&str] = &[
     "Testnet is a shared public test network: its protocol version and resource limits can differ from mainnet and change over time. Throwaway keys only.",
-    "Only probes expressible as view calls are evaluated; raw storage probes and executable-hash checks are reported as inconclusive here (use the in-process host for them).",
+    "Raw-storage probes are not supported here and are reported as inconclusive. The executable hash is read by downloading the contract's WASM with `stellar contract fetch` and hashing it. The network itself is never asked to reject an unauthenticated call: the Stellar CLI refuses to sign for an account whose key it lacks, so attacks by strangers are left to the in-process host.",
     "State comes from the seed operations you wrote. Live ledger state is never cloned, and storage keys are not discovered.",
     "A pass means the named invariants held for this one run. It is not a proof that the migration is safe in general, and not an audit.",
 ];
@@ -59,15 +59,21 @@ pub fn run(scenario: &Scenario, backend: &mut dyn Backend, meta: RunMeta) -> Res
     let mut traces: BTreeMap<String, OpTrace> = BTreeMap::new();
     let ids = identities_for_render(scenario, &meta);
 
+    // Nothing else touches the contract between two operations, so the readout after one
+    // operation is the readout before the next. Re-reading would only cost network calls.
+    let mut carried: Option<(Checkpoint, Option<String>)> = None;
     for op in &scenario.ops {
         let seq = (executed.len() + 1) as u32;
-        let before = read_all(backend, scenario);
-        let exec_before = backend.executable_hash();
+        let (before, exec_before) = match carried.take() {
+            Some(c) => c,
+            None => (read_all(backend, scenario), backend.executable_hash()),
+        };
         let rec = backend.invoke(op)?;
         let exec_after = backend.executable_hash();
         let after = read_all(backend, scenario);
         checkpoints.insert(format!("before:{}", op.id), before);
-        checkpoints.insert(format!("after:{}", op.id), after);
+        checkpoints.insert(format!("after:{}", op.id), after.clone());
+        carried = Some((after, exec_after.clone()));
         let ok = rec.outcome.status == "ok";
         let expectation = match op.expect {
             Expect::Any => "any",
