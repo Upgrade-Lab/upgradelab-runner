@@ -1,0 +1,2414 @@
+{
+  "reportVersion": 1,
+  "kind": "upgradelab-report",
+  "tool": {
+    "name": "upgradelab-runner",
+    "runnerVersion": "0.1.0",
+    "sorobanSdk": "28.0.0",
+    "hostProtocol": 29,
+    "mode": "testnet",
+    "authEnforcement": "Real network authorization: transactions are built and signed by the Stellar CLI with throwaway testnet keys and simulated/submitted against the public RPC."
+  },
+  "scenario": {
+    "name": "vault-correct-testnet",
+    "sha256": "39c85f54a68727bee062ef0ce62071cbe0494a22f0358f42334ceb4e983be872",
+    "definition": {
+      "scenarioVersion": 1,
+      "name": "vault-correct-testnet",
+      "description": "The corrected-path rehearsal for Stellar testnet: deploy v1, seed, upgrade, migrate, verify through RPC reads. Omits raw-storage probes and the signing-key attack operations, which testnet mode cannot evaluate (see README).",
+      "wasm": {
+        "old": "fixtures/wasm/vault_v1.wasm",
+        "new": "fixtures/wasm/vault_v2_correct.wasm"
+      },
+      "accounts": [
+        "admin",
+        "alice",
+        "bob",
+        "carol",
+        "dave",
+        "mallory"
+      ],
+      "ops": [
+        {
+          "id": "s-init",
+          "phase": "seed",
+          "fn": "initialize",
+          "args": [
+            {
+              "name": "admin",
+              "account": "admin"
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-alice-1",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "alice"
+            },
+            {
+              "name": "amount",
+              "i128": "100"
+            }
+          ],
+          "auth": [
+            "alice"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-bob",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "bob"
+            },
+            {
+              "name": "amount",
+              "i128": "250"
+            }
+          ],
+          "auth": [
+            "bob"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-carol",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "carol"
+            },
+            {
+              "name": "amount",
+              "i128": "75"
+            }
+          ],
+          "auth": [
+            "carol"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-dave",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "dave"
+            },
+            {
+              "name": "amount",
+              "i128": "40"
+            }
+          ],
+          "auth": [
+            "dave"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-alice-2",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "alice"
+            },
+            {
+              "name": "amount",
+              "i128": "25"
+            }
+          ],
+          "auth": [
+            "alice"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "upgrade",
+          "phase": "upgrade",
+          "fn": "upgrade",
+          "args": [
+            {
+              "name": "new_wasm_hash",
+              "wasmHash": "new"
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": true,
+          "note": "The real upgrade: the admin signs the call; the contract calls update_current_contract_wasm."
+        },
+        {
+          "id": "p-alice-deposit",
+          "phase": "postUpgrade",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "alice"
+            },
+            {
+              "name": "amount",
+              "i128": "50"
+            }
+          ],
+          "auth": [
+            "alice"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "p-migrate-partial",
+          "phase": "postUpgrade",
+          "fn": "migrate",
+          "args": [
+            {
+              "name": "limit",
+              "u32": 2
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": false,
+          "note": "Batched migration: convert at most 2 legacy balances."
+        },
+        {
+          "id": "p-migrate-rest",
+          "phase": "postUpgrade",
+          "fn": "migrate",
+          "args": [
+            {
+              "name": "limit",
+              "u32": 10
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "p-migrate-again",
+          "phase": "postUpgrade",
+          "fn": "migrate",
+          "args": [
+            {
+              "name": "limit",
+              "u32": 10
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": false,
+          "note": "Repeated migration call: must change nothing."
+        },
+        {
+          "id": "attack-reinit",
+          "phase": "postUpgrade",
+          "fn": "initialize",
+          "args": [
+            {
+              "name": "admin",
+              "account": "mallory"
+            }
+          ],
+          "auth": [
+            "mallory"
+          ],
+          "expect": "error",
+          "upgrade": false,
+          "note": "Repeated initialization by a stranger who authorizes her own call."
+        }
+      ],
+      "probes": [
+        {
+          "kind": "call",
+          "id": "balance-alice",
+          "fn": "balance",
+          "args": [
+            {
+              "name": "who",
+              "account": "alice"
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "id": "balance-bob",
+          "fn": "balance",
+          "args": [
+            {
+              "name": "who",
+              "account": "bob"
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "id": "balance-carol",
+          "fn": "balance",
+          "args": [
+            {
+              "name": "who",
+              "account": "carol"
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "id": "balance-dave",
+          "fn": "balance",
+          "args": [
+            {
+              "name": "who",
+              "account": "dave"
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "id": "total-supply",
+          "fn": "total_supply",
+          "args": []
+        },
+        {
+          "kind": "call",
+          "id": "admin",
+          "fn": "admin",
+          "args": []
+        },
+        {
+          "kind": "call",
+          "id": "holders",
+          "fn": "holders",
+          "args": []
+        }
+      ],
+      "invariants": [
+        {
+          "kind": "preserved",
+          "id": "balances-preserved-across-upgrade",
+          "title": "Every seeded balance, the total supply and the holder list are identical immediately before and after the upgrade",
+          "from": "before:upgrade",
+          "to": "after:upgrade",
+          "probes": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave",
+            "total-supply",
+            "holders"
+          ]
+        },
+        {
+          "kind": "preserved",
+          "id": "admin-unchanged-across-upgrade",
+          "title": "The admin address is unchanged by the upgrade",
+          "from": "before:upgrade",
+          "to": "after:upgrade",
+          "probes": [
+            "admin"
+          ]
+        },
+        {
+          "kind": "sumEquals",
+          "id": "supply-equals-sum-after-upgrade",
+          "title": "Total supply equals the sum of balances right after the upgrade",
+          "at": "after:upgrade",
+          "parts": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave"
+          ],
+          "total": "total-supply"
+        },
+        {
+          "kind": "expectedValues",
+          "id": "mixed-format-balances-correct",
+          "title": "With old and new entries side by side, every balance reads back as the seed operations imply",
+          "at": "after:p-alice-deposit",
+          "expect": {
+            "balance-alice": "175",
+            "balance-bob": "250",
+            "balance-carol": "75",
+            "balance-dave": "40",
+            "total-supply": "540"
+          }
+        },
+        {
+          "kind": "expectedValues",
+          "id": "partial-migration-preserves-balances",
+          "title": "After a partial (batched) migration every balance is still correct",
+          "at": "after:p-migrate-partial",
+          "expect": {
+            "balance-alice": "175",
+            "balance-bob": "250",
+            "balance-carol": "75",
+            "balance-dave": "40",
+            "total-supply": "540"
+          }
+        },
+        {
+          "kind": "expectedValues",
+          "id": "seeded-balances-preserved-after-migration",
+          "title": "After the migration every seeded balance equals the value the seed operations imply",
+          "at": "after:p-migrate-rest",
+          "expect": {
+            "balance-alice": "175",
+            "balance-bob": "250",
+            "balance-carol": "75",
+            "balance-dave": "40",
+            "total-supply": "540"
+          }
+        },
+        {
+          "kind": "sumEquals",
+          "id": "supply-equals-sum-after-migration",
+          "title": "Total supply equals the sum of balances after the migration",
+          "at": "after:p-migrate-rest",
+          "parts": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave"
+          ],
+          "total": "total-supply"
+        },
+        {
+          "kind": "preserved",
+          "id": "admin-unchanged-after-migration",
+          "title": "The admin address is unchanged after the whole upgrade and migration",
+          "from": "before:upgrade",
+          "to": "after:p-migrate-rest",
+          "probes": [
+            "admin"
+          ]
+        },
+        {
+          "kind": "stableAcrossOp",
+          "id": "migration-idempotent",
+          "title": "Calling migrate again changes nothing (balances, supply, admin, holders and raw storage)",
+          "op": "p-migrate-again",
+          "probes": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave",
+            "total-supply",
+            "admin",
+            "holders"
+          ]
+        },
+        {
+          "kind": "opRejected",
+          "id": "reinitialize-rejected",
+          "title": "A repeated initialize by a stranger is rejected by the contract",
+          "op": "attack-reinit",
+          "class": "contract"
+        },
+        {
+          "kind": "stableAcrossOp",
+          "id": "reinitialize-changes-nothing",
+          "title": "A repeated initialize leaves admin, supply, holders and balances untouched",
+          "op": "attack-reinit",
+          "probes": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave",
+            "total-supply",
+            "admin",
+            "holders"
+          ]
+        }
+      ]
+    }
+  },
+  "wasm": {
+    "old": {
+      "path": "fixtures/wasm/vault_v1.wasm",
+      "sha256": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "bytes": 3353
+    },
+    "new": {
+      "path": "fixtures/wasm/vault_v2_correct.wasm",
+      "sha256": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+      "bytes": 4960
+    }
+  },
+  "categories": [
+    {
+      "id": "testnet-rpc",
+      "title": "Stellar testnet",
+      "status": "executed",
+      "detail": "Real transactions on testnet through the Stellar CLI with throwaway keys; state read back through RPC simulation and contract fetch."
+    },
+    {
+      "id": "compiled-wasm",
+      "title": "Compiled WASM in the in-process Soroban host",
+      "status": "not-run",
+      "detail": "Not used for this report; run `upgradelab run` for it."
+    },
+    {
+      "id": "native-sdk",
+      "title": "Native SDK tests (Rust, mocked auth, not the VM)",
+      "status": "not-run",
+      "detail": "Not used for this report."
+    }
+  ],
+  "executedOps": [
+    {
+      "seq": 1,
+      "id": "upload-old",
+      "phase": "system",
+      "fn": "upload_contract_wasm",
+      "args": [
+        {
+          "name": "wasmSha256",
+          "shape": "string",
+          "value": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+        }
+      ],
+      "signers": [],
+      "outcome": {
+        "status": "ok"
+      },
+      "expectation": "n/a",
+      "observedAuth": []
+    },
+    {
+      "seq": 2,
+      "id": "deploy-old",
+      "phase": "system",
+      "fn": "deploy",
+      "args": [
+        {
+          "name": "wasmSha256",
+          "shape": "string",
+          "value": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+        }
+      ],
+      "signers": [],
+      "outcome": {
+        "status": "ok"
+      },
+      "expectation": "n/a",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "txHash": "95c55e9fbc2ce3059dd1cfe29302bfa03758aef0b0ff209178765340eb92b9a0"
+    },
+    {
+      "seq": 3,
+      "id": "upload-new",
+      "phase": "system",
+      "fn": "upload_contract_wasm",
+      "args": [
+        {
+          "name": "wasmSha256",
+          "shape": "string",
+          "value": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+        }
+      ],
+      "signers": [],
+      "outcome": {
+        "status": "ok"
+      },
+      "expectation": "n/a",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 4,
+      "id": "s-init",
+      "phase": "seed",
+      "fn": "initialize",
+      "args": [
+        {
+          "name": "admin",
+          "shape": "address",
+          "value": "admin"
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "txHash": "8428076d3c7a3aece9dfdcc272332bcda249179e68e82ea65b676f4157fc6cef"
+    },
+    {
+      "seq": 5,
+      "id": "s-alice-1",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "alice"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "100"
+        }
+      ],
+      "signers": [
+        "alice"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "txHash": "f66cf13ce043311a2afe21cf17f937694e9404ba9360980904dcefac95c47b2d"
+    },
+    {
+      "seq": 6,
+      "id": "s-bob",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "bob"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "250"
+        }
+      ],
+      "signers": [
+        "bob"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "txHash": "8731c90223e957d814082d33a1d08d2bc53d952294cac8d60b2499545abfe5cd"
+    },
+    {
+      "seq": 7,
+      "id": "s-carol",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "carol"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "75"
+        }
+      ],
+      "signers": [
+        "carol"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "txHash": "59647e0bbc5758e8bc7f2907befb571d3f734bc9f1943dbd030a30f74a4b1988"
+    },
+    {
+      "seq": 8,
+      "id": "s-dave",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "dave"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "40"
+        }
+      ],
+      "signers": [
+        "dave"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "txHash": "65812d66071a30de6a486f99acccb585676a199746d6b5167602158ed960d6a2"
+    },
+    {
+      "seq": 9,
+      "id": "s-alice-2",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "alice"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "25"
+        }
+      ],
+      "signers": [
+        "alice"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "txHash": "362609632466fe1f24f884d4c990c20093f5eea45d681ba5629422a96967e6e4"
+    },
+    {
+      "seq": 10,
+      "id": "upgrade",
+      "phase": "upgrade",
+      "fn": "upgrade",
+      "args": [
+        {
+          "name": "new_wasm_hash",
+          "shape": "bytes",
+          "value": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+      "txHash": "84b53e15c9a583430b1a1aebb33b819617f19da9aef8d1e42c48f05bf3168afa"
+    },
+    {
+      "seq": 11,
+      "id": "p-alice-deposit",
+      "phase": "postUpgrade",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "alice"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "50"
+        }
+      ],
+      "signers": [
+        "alice"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+      "txHash": "534b6e9dfe8c2d581bb083b0dd841d47ea7d8bfcde0888eed7d30fe4e608720c"
+    },
+    {
+      "seq": 12,
+      "id": "p-migrate-partial",
+      "phase": "postUpgrade",
+      "fn": "migrate",
+      "args": [
+        {
+          "name": "limit",
+          "shape": "u32",
+          "value": 2
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": 1
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+      "txHash": "4523054deec5fde3aa2cae5e87f12e35917a882a11299fa0ba8cb079de446362"
+    },
+    {
+      "seq": 13,
+      "id": "p-migrate-rest",
+      "phase": "postUpgrade",
+      "fn": "migrate",
+      "args": [
+        {
+          "name": "limit",
+          "shape": "u32",
+          "value": 10
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": 0
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+      "txHash": "ffe91e3e81a8e2c2006669f5ce85f1d749d7f3b737fc40bec4aea9ca452a8314"
+    },
+    {
+      "seq": 14,
+      "id": "p-migrate-again",
+      "phase": "postUpgrade",
+      "fn": "migrate",
+      "args": [
+        {
+          "name": "limit",
+          "shape": "u32",
+          "value": 10
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "json",
+        "value": 0
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+      "txHash": "caf945c50baaac598b0567178f1a7ca51f32ae7b15de6f5c58f21233c82362e7"
+    },
+    {
+      "seq": 15,
+      "id": "attack-reinit",
+      "phase": "postUpgrade",
+      "fn": "initialize",
+      "args": [
+        {
+          "name": "admin",
+          "shape": "address",
+          "value": "mallory"
+        }
+      ],
+      "signers": [
+        "mallory"
+      ],
+      "outcome": {
+        "status": "error",
+        "error": {
+          "class": "contract",
+          "hostError": "Contract(1)",
+          "contractCode": 1,
+          "message": "transaction simulation failed: HostError: Error(Contract, #1)"
+        }
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    }
+  ],
+  "checkpoints": {
+    "after:attack-reinit": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "after:p-alice-deposit": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "after:p-migrate-again": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "after:p-migrate-partial": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "after:p-migrate-rest": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "after:s-alice-1": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      }
+    },
+    "after:s-alice-2": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "490"
+      }
+    },
+    "after:s-bob": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "350"
+      }
+    },
+    "after:s-carol": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "425"
+      }
+    },
+    "after:s-dave": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "465"
+      }
+    },
+    "after:s-init": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": []
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      }
+    },
+    "after:upgrade": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "490"
+      }
+    },
+    "before:attack-reinit": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "before:p-alice-deposit": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "490"
+      }
+    },
+    "before:p-migrate-again": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "before:p-migrate-partial": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "before:p-migrate-rest": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "540"
+      }
+    },
+    "before:s-alice-1": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": []
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      }
+    },
+    "before:s-alice-2": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "465"
+      }
+    },
+    "before:s-bob": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      }
+    },
+    "before:s-carol": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "350"
+      }
+    },
+    "before:s-dave": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "425"
+      }
+    },
+    "before:s-init": {
+      "admin": {
+        "ok": false,
+        "error": "contract Contract(2) transaction simulation failed: HostError: Error(Contract, #2)"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": []
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "0"
+      }
+    },
+    "before:upgrade": {
+      "admin": {
+        "ok": true,
+        "shape": "json",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "json",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "json",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "json",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "json",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "json",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "json",
+        "value": "490"
+      }
+    }
+  },
+  "authChecks": [
+    {
+      "invariant": "reinitialize-rejected",
+      "op": "attack-reinit",
+      "signers": [
+        "mallory"
+      ],
+      "signatureScheme": "ed25519",
+      "rejected": true,
+      "errorClass": "contract",
+      "executableUnchanged": true
+    }
+  ],
+  "invariants": [
+    {
+      "id": "seed-operations-succeeded",
+      "title": "Seed operations on the old WASM established the starting state",
+      "kind": "builtin",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "every seed operation succeeded",
+      "evidence": {
+        "failedSeedOps": []
+      },
+      "builtin": true
+    },
+    {
+      "id": "upgrade-applied",
+      "title": "The upgrade operation replaced the old WASM with the new WASM",
+      "kind": "builtin",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "executable changed from 95c189323f9e to 10248d4198fb",
+      "evidence": {
+        "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "executableBefore": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+        "expectedNew": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "expectedOld": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+        "upgradeOutcomeOk": true
+      },
+      "builtin": true
+    },
+    {
+      "id": "post-upgrade-operations-succeeded",
+      "title": "Operations expected to succeed after the upgrade (including migration calls) succeeded",
+      "kind": "builtin",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "all expected-ok post-upgrade operations succeeded",
+      "evidence": {
+        "failedOps": []
+      },
+      "builtin": true
+    },
+    {
+      "id": "balances-preserved-across-upgrade",
+      "title": "Every seeded balance, the total supply and the holder list are identical immediately before and after the upgrade",
+      "kind": "preserved",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "6 probe(s) identical between before:upgrade and after:upgrade",
+      "evidence": {
+        "from": "before:upgrade",
+        "rows": [
+          {
+            "equal": true,
+            "from": "125",
+            "probe": "balance-alice",
+            "to": "125"
+          },
+          {
+            "equal": true,
+            "from": "250",
+            "probe": "balance-bob",
+            "to": "250"
+          },
+          {
+            "equal": true,
+            "from": "75",
+            "probe": "balance-carol",
+            "to": "75"
+          },
+          {
+            "equal": true,
+            "from": "40",
+            "probe": "balance-dave",
+            "to": "40"
+          },
+          {
+            "equal": true,
+            "from": "490",
+            "probe": "total-supply",
+            "to": "490"
+          },
+          {
+            "equal": true,
+            "from": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "probe": "holders",
+            "to": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ]
+          }
+        ],
+        "to": "after:upgrade"
+      },
+      "builtin": false
+    },
+    {
+      "id": "admin-unchanged-across-upgrade",
+      "title": "The admin address is unchanged by the upgrade",
+      "kind": "preserved",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "1 probe(s) identical between before:upgrade and after:upgrade",
+      "evidence": {
+        "from": "before:upgrade",
+        "rows": [
+          {
+            "equal": true,
+            "from": "admin",
+            "probe": "admin",
+            "to": "admin"
+          }
+        ],
+        "to": "after:upgrade"
+      },
+      "builtin": false
+    },
+    {
+      "id": "supply-equals-sum-after-upgrade",
+      "title": "Total supply equals the sum of balances right after the upgrade",
+      "kind": "sumEquals",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "sum of 4 parts is 490, equal to total-supply (490)",
+      "evidence": {
+        "at": "after:upgrade",
+        "parts": [
+          {
+            "probe": "balance-alice",
+            "value": "125"
+          },
+          {
+            "probe": "balance-bob",
+            "value": "250"
+          },
+          {
+            "probe": "balance-carol",
+            "value": "75"
+          },
+          {
+            "probe": "balance-dave",
+            "value": "40"
+          }
+        ],
+        "sum": "490",
+        "total": {
+          "probe": "total-supply",
+          "value": "490"
+        }
+      },
+      "builtin": false
+    },
+    {
+      "id": "mixed-format-balances-correct",
+      "title": "With old and new entries side by side, every balance reads back as the seed operations imply",
+      "kind": "expectedValues",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "5 value(s) match expectations at after:p-alice-deposit",
+      "evidence": {
+        "at": "after:p-alice-deposit",
+        "rows": [
+          {
+            "actual": "175",
+            "equal": true,
+            "expected": "175",
+            "probe": "balance-alice"
+          },
+          {
+            "actual": "250",
+            "equal": true,
+            "expected": "250",
+            "probe": "balance-bob"
+          },
+          {
+            "actual": "75",
+            "equal": true,
+            "expected": "75",
+            "probe": "balance-carol"
+          },
+          {
+            "actual": "40",
+            "equal": true,
+            "expected": "40",
+            "probe": "balance-dave"
+          },
+          {
+            "actual": "540",
+            "equal": true,
+            "expected": "540",
+            "probe": "total-supply"
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "partial-migration-preserves-balances",
+      "title": "After a partial (batched) migration every balance is still correct",
+      "kind": "expectedValues",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "5 value(s) match expectations at after:p-migrate-partial",
+      "evidence": {
+        "at": "after:p-migrate-partial",
+        "rows": [
+          {
+            "actual": "175",
+            "equal": true,
+            "expected": "175",
+            "probe": "balance-alice"
+          },
+          {
+            "actual": "250",
+            "equal": true,
+            "expected": "250",
+            "probe": "balance-bob"
+          },
+          {
+            "actual": "75",
+            "equal": true,
+            "expected": "75",
+            "probe": "balance-carol"
+          },
+          {
+            "actual": "40",
+            "equal": true,
+            "expected": "40",
+            "probe": "balance-dave"
+          },
+          {
+            "actual": "540",
+            "equal": true,
+            "expected": "540",
+            "probe": "total-supply"
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "seeded-balances-preserved-after-migration",
+      "title": "After the migration every seeded balance equals the value the seed operations imply",
+      "kind": "expectedValues",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "5 value(s) match expectations at after:p-migrate-rest",
+      "evidence": {
+        "at": "after:p-migrate-rest",
+        "rows": [
+          {
+            "actual": "175",
+            "equal": true,
+            "expected": "175",
+            "probe": "balance-alice"
+          },
+          {
+            "actual": "250",
+            "equal": true,
+            "expected": "250",
+            "probe": "balance-bob"
+          },
+          {
+            "actual": "75",
+            "equal": true,
+            "expected": "75",
+            "probe": "balance-carol"
+          },
+          {
+            "actual": "40",
+            "equal": true,
+            "expected": "40",
+            "probe": "balance-dave"
+          },
+          {
+            "actual": "540",
+            "equal": true,
+            "expected": "540",
+            "probe": "total-supply"
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "supply-equals-sum-after-migration",
+      "title": "Total supply equals the sum of balances after the migration",
+      "kind": "sumEquals",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "sum of 4 parts is 540, equal to total-supply (540)",
+      "evidence": {
+        "at": "after:p-migrate-rest",
+        "parts": [
+          {
+            "probe": "balance-alice",
+            "value": "175"
+          },
+          {
+            "probe": "balance-bob",
+            "value": "250"
+          },
+          {
+            "probe": "balance-carol",
+            "value": "75"
+          },
+          {
+            "probe": "balance-dave",
+            "value": "40"
+          }
+        ],
+        "sum": "540",
+        "total": {
+          "probe": "total-supply",
+          "value": "540"
+        }
+      },
+      "builtin": false
+    },
+    {
+      "id": "admin-unchanged-after-migration",
+      "title": "The admin address is unchanged after the whole upgrade and migration",
+      "kind": "preserved",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "1 probe(s) identical between before:upgrade and after:p-migrate-rest",
+      "evidence": {
+        "from": "before:upgrade",
+        "rows": [
+          {
+            "equal": true,
+            "from": "admin",
+            "probe": "admin",
+            "to": "admin"
+          }
+        ],
+        "to": "after:p-migrate-rest"
+      },
+      "builtin": false
+    },
+    {
+      "id": "migration-idempotent",
+      "title": "Calling migrate again changes nothing (balances, supply, admin, holders and raw storage)",
+      "kind": "stableAcrossOp",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "7 probe(s) unchanged across `p-migrate-again` (the call succeeded)",
+      "evidence": {
+        "op": "p-migrate-again",
+        "opOutcome": "ok",
+        "rows": [
+          {
+            "after": "175",
+            "before": "175",
+            "equal": true,
+            "probe": "balance-alice"
+          },
+          {
+            "after": "250",
+            "before": "250",
+            "equal": true,
+            "probe": "balance-bob"
+          },
+          {
+            "after": "75",
+            "before": "75",
+            "equal": true,
+            "probe": "balance-carol"
+          },
+          {
+            "after": "40",
+            "before": "40",
+            "equal": true,
+            "probe": "balance-dave"
+          },
+          {
+            "after": "540",
+            "before": "540",
+            "equal": true,
+            "probe": "total-supply"
+          },
+          {
+            "after": "admin",
+            "before": "admin",
+            "equal": true,
+            "probe": "admin"
+          },
+          {
+            "after": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "before": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "equal": true,
+            "probe": "holders"
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "reinitialize-rejected",
+      "title": "A repeated initialize by a stranger is rejected by the contract",
+      "kind": "opRejected",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "`attack-reinit` rejected (contract Contract(1)); executable unchanged",
+      "evidence": {
+        "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "executableBefore": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "op": "attack-reinit",
+        "outcome": {
+          "error": {
+            "class": "contract",
+            "contractCode": 1,
+            "hostError": "Contract(1)",
+            "message": "transaction simulation failed: HostError: Error(Contract, #1)"
+          },
+          "status": "error"
+        },
+        "signers": [
+          "mallory"
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "reinitialize-changes-nothing",
+      "title": "A repeated initialize leaves admin, supply, holders and balances untouched",
+      "kind": "stableAcrossOp",
+      "status": "pass",
+      "category": "testnet-rpc",
+      "summary": "7 probe(s) unchanged across `attack-reinit` (the call was rejected)",
+      "evidence": {
+        "op": "attack-reinit",
+        "opOutcome": "error",
+        "rows": [
+          {
+            "after": "175",
+            "before": "175",
+            "equal": true,
+            "probe": "balance-alice"
+          },
+          {
+            "after": "250",
+            "before": "250",
+            "equal": true,
+            "probe": "balance-bob"
+          },
+          {
+            "after": "75",
+            "before": "75",
+            "equal": true,
+            "probe": "balance-carol"
+          },
+          {
+            "after": "40",
+            "before": "40",
+            "equal": true,
+            "probe": "balance-dave"
+          },
+          {
+            "after": "540",
+            "before": "540",
+            "equal": true,
+            "probe": "total-supply"
+          },
+          {
+            "after": "admin",
+            "before": "admin",
+            "equal": true,
+            "probe": "admin"
+          },
+          {
+            "after": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "before": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "equal": true,
+            "probe": "holders"
+          }
+        ]
+      },
+      "builtin": false
+    }
+  ],
+  "verdict": {
+    "status": "pass",
+    "passed": 14,
+    "failed": 0,
+    "inconclusive": 0
+  },
+  "limits": [
+    "Testnet is a shared public test network: its protocol version and resource limits can differ from mainnet and change over time. Throwaway keys only.",
+    "Raw-storage probes are not supported here and are reported as inconclusive. The executable hash is read by downloading the contract's WASM with `stellar contract fetch` and hashing it. The network itself is never asked to reject an unauthenticated call: the Stellar CLI refuses to sign for an account whose key it lacks, so attacks by strangers are left to the in-process host.",
+    "State comes from the seed operations you wrote. Live ledger state is never cloned, and storage keys are not discovered.",
+    "A pass means the named invariants held for this one run. It is not a proof that the migration is safe in general, and not an audit."
+  ],
+  "network": {
+    "network": "testnet",
+    "rpcUrl": "https://soroban-testnet.stellar.org",
+    "contractId": "CC6TBNXUS5NFBKDPEULVFXB4ORDYRYN6JRFYQWEC6YLG6EJ5JNHJMLM4",
+    "wasmHashOld": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+    "wasmHashNew": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+    "accounts": {
+      "admin": "GCVMDW43ZREMX55K4NA7D3BQARIBC25FNPBZH5FUWOTLPA7GX5XGGL4X",
+      "alice": "GCCONLT37YEQ5DWUT533OSCAK2PPS7NWLS4AQETSI5ANCKSHZ5P5RRLF",
+      "bob": "GDZF4CZV2FFGYWMKGUHBQD47HNXMFFZLIZJBOJKMTCJC3F55QVXBQA6N",
+      "carol": "GB4RUPRSTIBD55VYOTMKNZ6HLQ64XYQMBOKESUVXO4G4M5YMQZULUAEP",
+      "dave": "GDZVKM6FZZC35S4TRRONBTHUFXKZW5XFSU4ZY4YDEVW4TT6PXOOGQZ4D",
+      "mallory": "GC6ZIVAB2FKJAY5OKGEWTIPG5P7LYFOPZKKQSHQO53ZVMR4NJSER7JPI"
+    }
+  }
+}

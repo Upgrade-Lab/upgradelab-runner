@@ -1,0 +1,82 @@
+UpgradeLab report v1: vault-correct-testnet
+mode: testnet | runner 0.1.0 | soroban-sdk 28.0.0 | host protocol 29
+old wasm: fixtures/wasm/vault_v1.wasm sha256 95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222
+new wasm: fixtures/wasm/vault_v2_correct.wasm sha256 10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01
+scenario sha256: 39c85f54a68727bee062ef0ce62071cbe0494a22f0358f42334ceb4e983be872
+
+Execution categories (reported separately):
+  [executed] testnet-rpc: Stellar testnet
+  [not-run] compiled-wasm: Compiled WASM in the in-process Soroban host
+  [not-run] native-sdk: Native SDK tests (Rust, mocked auth, not the VM)
+
+Executed operations:
+   1. [system] upload-old upload_contract_wasm(wasmSha256="95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222") unsigned => ok
+   2. [system] deploy-old deploy(wasmSha256="95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222") unsigned => ok
+   3. [system] upload-new upload_contract_wasm(wasmSha256="10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01") unsigned => ok
+   4. [seed] s-init initialize(admin="admin") signed by admin => ok
+   5. [seed] s-alice-1 deposit(from="alice", amount="100") signed by alice => ok
+   6. [seed] s-bob deposit(from="bob", amount="250") signed by bob => ok
+   7. [seed] s-carol deposit(from="carol", amount="75") signed by carol => ok
+   8. [seed] s-dave deposit(from="dave", amount="40") signed by dave => ok
+   9. [seed] s-alice-2 deposit(from="alice", amount="25") signed by alice => ok
+  10. [upgrade] upgrade upgrade(new_wasm_hash="10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01") signed by admin => ok
+  11. [postUpgrade] p-alice-deposit deposit(from="alice", amount="50") signed by alice => ok
+  12. [postUpgrade] p-migrate-partial migrate(limit=2) signed by admin => ok -> 1
+  13. [postUpgrade] p-migrate-rest migrate(limit=10) signed by admin => ok -> 0
+  14. [postUpgrade] p-migrate-again migrate(limit=10) signed by admin => ok -> 0
+  15. [postUpgrade] attack-reinit initialize(admin="mallory") signed by mallory => ERROR contract Contract(1) transaction simulation failed: HostError: Error(Contract, #1)
+
+Invariants:
+  PASS         seed-operations-succeeded (built-in)
+               Seed operations on the old WASM established the starting state
+               every seed operation succeeded
+  PASS         upgrade-applied (built-in)
+               The upgrade operation replaced the old WASM with the new WASM
+               executable changed from 95c189323f9e to 10248d4198fb
+  PASS         post-upgrade-operations-succeeded (built-in)
+               Operations expected to succeed after the upgrade (including migration calls) succeeded
+               all expected-ok post-upgrade operations succeeded
+  PASS         balances-preserved-across-upgrade
+               Every seeded balance, the total supply and the holder list are identical immediately before and after the upgrade
+               6 probe(s) identical between before:upgrade and after:upgrade
+  PASS         admin-unchanged-across-upgrade
+               The admin address is unchanged by the upgrade
+               1 probe(s) identical between before:upgrade and after:upgrade
+  PASS         supply-equals-sum-after-upgrade
+               Total supply equals the sum of balances right after the upgrade
+               sum of 4 parts is 490, equal to total-supply (490)
+  PASS         mixed-format-balances-correct
+               With old and new entries side by side, every balance reads back as the seed operations imply
+               5 value(s) match expectations at after:p-alice-deposit
+  PASS         partial-migration-preserves-balances
+               After a partial (batched) migration every balance is still correct
+               5 value(s) match expectations at after:p-migrate-partial
+  PASS         seeded-balances-preserved-after-migration
+               After the migration every seeded balance equals the value the seed operations imply
+               5 value(s) match expectations at after:p-migrate-rest
+  PASS         supply-equals-sum-after-migration
+               Total supply equals the sum of balances after the migration
+               sum of 4 parts is 540, equal to total-supply (540)
+  PASS         admin-unchanged-after-migration
+               The admin address is unchanged after the whole upgrade and migration
+               1 probe(s) identical between before:upgrade and after:p-migrate-rest
+  PASS         migration-idempotent
+               Calling migrate again changes nothing (balances, supply, admin, holders and raw storage)
+               7 probe(s) unchanged across `p-migrate-again` (the call succeeded)
+  PASS         reinitialize-rejected
+               A repeated initialize by a stranger is rejected by the contract
+               `attack-reinit` rejected (contract Contract(1)); executable unchanged
+  PASS         reinitialize-changes-nothing
+               A repeated initialize leaves admin, supply, holders and balances untouched
+               7 probe(s) unchanged across `attack-reinit` (the call was rejected)
+
+Authorization checks:
+  op attack-reinit signers [mallory] rejected=true class=contract executableUnchanged=true
+
+Verdict: PASS (14 passed, 0 failed, 0 inconclusive)
+
+What this does not show:
+  - Testnet is a shared public test network: its protocol version and resource limits can differ from mainnet and change over time. Throwaway keys only.
+  - Raw-storage probes are not supported here and are reported as inconclusive. The executable hash is read by downloading the contract's WASM with `stellar contract fetch` and hashing it. The network itself is never asked to reject an unauthenticated call: the Stellar CLI refuses to sign for an account whose key it lacks, so attacks by strangers are left to the in-process host.
+  - State comes from the seed operations you wrote. Live ledger state is never cloned, and storage keys are not discovered.
+  - A pass means the named invariants held for this one run. It is not a proof that the migration is safe in general, and not an audit.
