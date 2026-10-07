@@ -1,0 +1,12 @@
+{
+  "note": "sha256 of the committed fixture WASMs. Hashes can differ if rebuilt with another rustc/stellar CLI; reports always record the hash of the file actually executed.",
+  "toolchain": {"stellar": "stellar 28.1.0 (c0f4d0da891bbf214c08b8c5035ae6db80e9a3bd)", "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)"},
+  "wasm": [
+    {"file": "vault_v1.wasm", "package": "vault-v1", "features": "", "bytes": 3353, "sha256": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"},
+    {"file": "vault_v2_correct.wasm", "package": "vault-v2", "features": "", "bytes": 4960, "sha256": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"},
+    {"file": "vault_v2_broken_lose_balance.wasm", "package": "vault-v2", "features": "broken-lose-balance", "bytes": 4993, "sha256": "6abf198abe1d54bc20b5f98eb0b88da57f8a1ebad5939ecf12adbdea9ccea5ee"},
+    {"file": "vault_v2_broken_double_balance.wasm", "package": "vault-v2", "features": "broken-double-balance", "bytes": 4987, "sha256": "0fa8968bae6431c01bc9591b8f21f4da892329a61a0b455de7d1683965db147c"},
+    {"file": "vault_v2_broken_reinit.wasm", "package": "vault-v2", "features": "broken-reinit", "bytes": 4926, "sha256": "d53ab196b0e49478664218bee9f96922e6344f5e97fa8a06a9028c0f5a7e6a23"},
+    {"file": "vault_v2_broken_upgrade_auth.wasm", "package": "vault-v2", "features": "broken-upgrade-auth", "bytes": 4958, "sha256": "20fbe6059e42d29e6c11de1f399fad3f8a0822c22232122749120544c3efe725"}
+  ]
+}
