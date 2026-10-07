@@ -1,0 +1,17 @@
+[package]
+name = "vault-v1"
+description = "UpgradeLab fixture: a toy vault, version 1 (balances map-by-address). Not audited, not for production."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
