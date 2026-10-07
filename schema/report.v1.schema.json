@@ -1,0 +1,1246 @@
+{
+  "$defs": {
+    "ArgView": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "shape": {
+          "type": "string"
+        },
+        "value": true
+      },
+      "required": [
+        "name",
+        "shape",
+        "value"
+      ],
+      "type": "object"
+    },
+    "AuthCheck": {
+      "properties": {
+        "errorClass": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "executableUnchanged": {
+          "description": "True/false when the executable hash could be read before and after.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "invariant": {
+          "type": "string"
+        },
+        "op": {
+          "type": "string"
+        },
+        "rejected": {
+          "type": "boolean"
+        },
+        "signatureScheme": {
+          "type": "string"
+        },
+        "signers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "invariant",
+        "op",
+        "signers",
+        "signatureScheme",
+        "rejected"
+      ],
+      "type": "object"
+    },
+    "Category": {
+      "properties": {
+        "detail": {
+          "type": "string"
+        },
+        "id": {
+          "description": "\"compiled-wasm\", \"testnet-rpc\" or \"native-sdk\".",
+          "type": "string"
+        },
+        "native": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NativeSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "description": "\"executed\", \"recorded-input\" or \"not-run\".",
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status",
+        "detail"
+      ],
+      "type": "object"
+    },
+    "Durability": {
+      "enum": [
+        "persistent",
+        "instance"
+      ],
+      "type": "string"
+    },
+    "ErrorClass": {
+      "enum": [
+        "auth",
+        "contract",
+        "trap"
+      ],
+      "type": "string"
+    },
+    "ErrorInfo": {
+      "properties": {
+        "class": {
+          "description": "\"auth\", \"contract\", \"trap\" or \"other\".",
+          "type": "string"
+        },
+        "contractCode": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "hostError": {
+          "description": "The host error, for example \"Auth(InvalidAction)\" or \"Contract(1)\".",
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "class",
+        "hostError",
+        "message"
+      ],
+      "type": "object"
+    },
+    "ExecutedOp": {
+      "properties": {
+        "args": {
+          "items": {
+            "$ref": "#/$defs/ArgView"
+          },
+          "type": "array"
+        },
+        "executableAfter": {
+          "description": "sha256 of the contract's executable after this operation, when readable.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectation": {
+          "description": "\"met\", \"unmet\" or \"any\".",
+          "type": "string"
+        },
+        "fn": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "observedAuth": {
+          "description": "Authorizations the host recorded as consumed by this call.",
+          "items": {
+            "$ref": "#/$defs/ObservedAuth"
+          },
+          "type": "array"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "phase": {
+          "description": "\"seed\", \"upgrade\", \"postUpgrade\", or \"system\" for runner-performed steps.",
+          "type": "string"
+        },
+        "seq": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "signers": {
+          "description": "Accounts that signed this call.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "txHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "seq",
+        "id",
+        "phase",
+        "fn",
+        "args",
+        "signers",
+        "outcome",
+        "expectation",
+        "observedAuth"
+      ],
+      "type": "object"
+    },
+    "Expect": {
+      "oneOf": [
+        {
+          "const": "ok",
+          "description": "The call must succeed (default). A failing seed operation aborts the run.",
+          "type": "string"
+        },
+        {
+          "const": "error",
+          "description": "The call is expected to be rejected (used for attack attempts).",
+          "type": "string"
+        },
+        {
+          "const": "any",
+          "description": "Either outcome is acceptable; invariants judge the result.",
+          "type": "string"
+        }
+      ]
+    },
+    "Invariant": {
+      "description": "A checkpoint is the full probe readout at a moment. `before:<opId>` and\n`after:<opId>` exist for every operation.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Every listed probe has the same value at two checkpoints.",
+          "properties": {
+            "from": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "preserved",
+              "type": "string"
+            },
+            "probes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "from",
+            "to",
+            "probes"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "At a checkpoint, the sum of the `parts` probes equals the `total` probe (i128).",
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "sumEquals",
+              "type": "string"
+            },
+            "parts": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            },
+            "total": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "at",
+            "parts",
+            "total"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "At a checkpoint, each probe's value equals an expected value written by the\napplication team (derived from the seed operations, not from the contract).",
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "expect": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "expectedValues",
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "at",
+            "expect"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "At a checkpoint, each probe has the stated storage shape (for example \"i128\"\nfor a legacy entry, \"map\" for a new struct, \"absent\" for a removed key).",
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "expect": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "shapes",
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "at",
+            "expect"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The listed probes are identical before and after an operation (idempotence,\nor \"a rejected/duplicate call changes nothing\").",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "stableAcrossOp",
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "probes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "op",
+            "probes"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The operation must have been rejected (and, in the host, must not have changed\nthe contract's executable). `class` optionally pins the kind of rejection.",
+          "properties": {
+            "class": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ErrorClass"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "opRejected",
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The operation must have succeeded.",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "opSucceeded",
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "op"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "InvariantResult": {
+      "properties": {
+        "builtin": {
+          "description": "True for invariants the runner adds itself (not written in the scenario).",
+          "type": "boolean"
+        },
+        "category": {
+          "description": "Which execution category produced this result.",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "The values that were compared."
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "summary": {
+          "description": "One line a human can act on.",
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "kind",
+        "status",
+        "category",
+        "summary",
+        "evidence",
+        "builtin"
+      ],
+      "type": "object"
+    },
+    "NativeSummary": {
+      "description": "Parsed from a `cargo test` log that you supply with --native-log. The runner does\nnot execute native tests itself; it records what the log says, with its hash.",
+      "properties": {
+        "failed": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ignored": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "logSha256": {
+          "type": "string"
+        },
+        "passed": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tests": {
+          "items": {
+            "$ref": "#/$defs/NativeTest"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "logSha256",
+        "passed",
+        "failed",
+        "ignored",
+        "tests"
+      ],
+      "type": "object"
+    },
+    "NativeTest": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "result"
+      ],
+      "type": "object"
+    },
+    "NetworkInfo": {
+      "properties": {
+        "accounts": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Accounts are throwaway testnet keys; their public keys.",
+          "type": "object"
+        },
+        "contractId": {
+          "type": "string"
+        },
+        "network": {
+          "type": "string"
+        },
+        "rpcUrl": {
+          "type": "string"
+        },
+        "wasmHashNew": {
+          "type": "string"
+        },
+        "wasmHashOld": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "network",
+        "rpcUrl",
+        "contractId",
+        "wasmHashOld",
+        "wasmHashNew",
+        "accounts"
+      ],
+      "type": "object"
+    },
+    "ObservedAuth": {
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "args": {
+          "items": true,
+          "type": "array"
+        },
+        "contract": {
+          "type": "string"
+        },
+        "fn": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "contract",
+        "fn",
+        "args"
+      ],
+      "type": "object"
+    },
+    "Op": {
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "type": "array"
+        },
+        "auth": {
+          "default": [],
+          "description": "Accounts that sign the authorization of this call's root invocation with a\nreal ed25519 signature. Empty means the call carries no authorization at all.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expect": {
+          "$ref": "#/$defs/Expect",
+          "default": "ok"
+        },
+        "fn": {
+          "description": "Contract function to invoke.",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "upgrade": {
+          "default": false,
+          "description": "Marks the operation that replaces the contract's WASM. Exactly one.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "phase",
+        "fn"
+      ],
+      "type": "object"
+    },
+    "Outcome": {
+      "properties": {
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shape": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "description": "\"ok\" or \"error\".",
+          "type": "string"
+        },
+        "value": true
+      },
+      "required": [
+        "status"
+      ],
+      "type": "object"
+    },
+    "Phase": {
+      "enum": [
+        "seed",
+        "upgrade",
+        "postUpgrade"
+      ],
+      "type": "string"
+    },
+    "Probe": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Read through the contract: call a view function.",
+          "properties": {
+            "args": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Value"
+              },
+              "type": "array"
+            },
+            "fn": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "call",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "fn"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Read a raw ledger entry of the contract by storage key, bypassing the\ncontract's own code. Only works in the in-process host.",
+          "properties": {
+            "durability": {
+              "$ref": "#/$defs/Durability"
+            },
+            "id": {
+              "type": "string"
+            },
+            "key": {
+              "$ref": "#/$defs/Value"
+            },
+            "kind": {
+              "const": "storage",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "durability",
+            "key"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProbeReading": {
+      "properties": {
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ok": {
+          "description": "False when the read itself failed; then `error` is set. A failed read is\nnever treated as a mismatch or a pass: it makes the invariant inconclusive.",
+          "type": "boolean"
+        },
+        "shape": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": true
+      },
+      "required": [
+        "ok"
+      ],
+      "type": "object"
+    },
+    "Scenario": {
+      "additionalProperties": false,
+      "properties": {
+        "accounts": {
+          "description": "Named test accounts. Each gets a deterministic ed25519 key derived from its\nname; the key and its account exist only inside the in-process ledger.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "invariants": {
+          "items": {
+            "$ref": "#/$defs/Invariant"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ops": {
+          "description": "Operations in execution order: seed operations on the old WASM, exactly one\nupgrade operation, then post-upgrade operations on the new WASM.",
+          "items": {
+            "$ref": "#/$defs/Op"
+          },
+          "type": "array"
+        },
+        "probes": {
+          "description": "Named reads of contract state, evaluated before and after every operation.",
+          "items": {
+            "$ref": "#/$defs/Probe"
+          },
+          "type": "array"
+        },
+        "scenarioVersion": {
+          "description": "Must be 1.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "wasm": {
+          "$ref": "#/$defs/WasmRefs"
+        }
+      },
+      "required": [
+        "scenarioVersion",
+        "name",
+        "wasm",
+        "accounts",
+        "ops",
+        "probes",
+        "invariants"
+      ],
+      "type": "object"
+    },
+    "ScenarioInfo": {
+      "properties": {
+        "definition": {
+          "$ref": "#/$defs/Scenario",
+          "description": "The full scenario, embedded so the report can be replayed."
+        },
+        "name": {
+          "type": "string"
+        },
+        "sha256": {
+          "description": "sha256 of the canonical (re-serialised) scenario JSON.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "sha256",
+        "definition"
+      ],
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "pass",
+        "fail",
+        "inconclusive"
+      ],
+      "type": "string"
+    },
+    "ToolInfo": {
+      "properties": {
+        "authEnforcement": {
+          "description": "What authorization enforcement means in this run, stated precisely.",
+          "type": "string"
+        },
+        "hostProtocol": {
+          "description": "Ledger protocol version the in-process host reported (the host linked into\nthis runner), or the version reported by the RPC for testnet runs.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mode": {
+          "description": "\"in-process-host\" or \"testnet\".",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "runnerVersion": {
+          "type": "string"
+        },
+        "sorobanSdk": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "runnerVersion",
+        "sorobanSdk",
+        "hostProtocol",
+        "mode",
+        "authEnforcement"
+      ],
+      "type": "object"
+    },
+    "Value": {
+      "additionalProperties": false,
+      "description": "One typed value. Exactly one of the value fields must be set. `name` is the\ncontract parameter name; it is required for operation and probe arguments (the\ntestnet mode passes it to the Stellar CLI) and ignored inside nested values.",
+      "properties": {
+        "account": {
+          "description": "Address of a named test account.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bool": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bytes": {
+          "description": "Hex.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contract": {
+          "description": "Address of the deployed contract under test (the only allowed value is \"subject\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "i128": {
+          "description": "Decimal string.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "i32": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "i64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "string": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "symbol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "u128": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "u32": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "u64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variant": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Variant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A `#[contracttype]` enum variant: a vec of [symbol, ...values]."
+        },
+        "vec": {
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "wasmHash": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WhichWasm"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The sha256 hash of the \"old\" or \"new\" WASM as uploaded to the ledger (BytesN<32>)."
+        }
+      },
+      "type": "object"
+    },
+    "Variant": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "values": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "Verdict": {
+      "properties": {
+        "failed": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "inconclusive": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "passed": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        }
+      },
+      "required": [
+        "status",
+        "passed",
+        "failed",
+        "inconclusive"
+      ],
+      "type": "object"
+    },
+    "WasmArtifact": {
+      "properties": {
+        "bytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "WasmInfo": {
+      "properties": {
+        "new": {
+          "$ref": "#/$defs/WasmArtifact"
+        },
+        "old": {
+          "$ref": "#/$defs/WasmArtifact"
+        }
+      },
+      "required": [
+        "old",
+        "new"
+      ],
+      "type": "object"
+    },
+    "WasmRefs": {
+      "additionalProperties": false,
+      "properties": {
+        "new": {
+          "description": "Path of the new WASM, relative to `--root`.",
+          "type": "string"
+        },
+        "old": {
+          "description": "Path of the old (currently deployed) WASM, relative to `--root`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "old",
+        "new"
+      ],
+      "type": "object"
+    },
+    "WhichWasm": {
+      "enum": [
+        "old",
+        "new"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "authChecks": {
+      "items": {
+        "$ref": "#/$defs/AuthCheck"
+      },
+      "type": "array"
+    },
+    "categories": {
+      "description": "Execution categories, kept distinct on purpose. Only the category that has\nstatus \"executed\" produced results in this report.",
+      "items": {
+        "$ref": "#/$defs/Category"
+      },
+      "type": "array"
+    },
+    "checkpoints": {
+      "additionalProperties": {
+        "additionalProperties": {
+          "$ref": "#/$defs/ProbeReading"
+        },
+        "type": "object"
+      },
+      "description": "Probe readouts keyed by `before:<opId>` / `after:<opId>`.",
+      "type": "object"
+    },
+    "executedOps": {
+      "items": {
+        "$ref": "#/$defs/ExecutedOp"
+      },
+      "type": "array"
+    },
+    "invariants": {
+      "items": {
+        "$ref": "#/$defs/InvariantResult"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "description": "Always \"upgradelab-report\".",
+      "type": "string"
+    },
+    "limits": {
+      "description": "What this report does not establish.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "network": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NetworkInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Present only for testnet runs."
+    },
+    "reportVersion": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "scenario": {
+      "$ref": "#/$defs/ScenarioInfo"
+    },
+    "tool": {
+      "$ref": "#/$defs/ToolInfo"
+    },
+    "verdict": {
+      "$ref": "#/$defs/Verdict"
+    },
+    "wasm": {
+      "$ref": "#/$defs/WasmInfo"
+    }
+  },
+  "required": [
+    "reportVersion",
+    "kind",
+    "tool",
+    "scenario",
+    "wasm",
+    "categories",
+    "executedOps",
+    "checkpoints",
+    "authChecks",
+    "invariants",
+    "verdict",
+    "limits"
+  ],
+  "title": "UpgradeLab report v1",
+  "type": "object"
+}

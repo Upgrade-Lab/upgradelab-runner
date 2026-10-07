@@ -1,0 +1,621 @@
+{
+  "$defs": {
+    "Durability": {
+      "enum": [
+        "persistent",
+        "instance"
+      ],
+      "type": "string"
+    },
+    "ErrorClass": {
+      "enum": [
+        "auth",
+        "contract",
+        "trap"
+      ],
+      "type": "string"
+    },
+    "Expect": {
+      "oneOf": [
+        {
+          "const": "ok",
+          "description": "The call must succeed (default). A failing seed operation aborts the run.",
+          "type": "string"
+        },
+        {
+          "const": "error",
+          "description": "The call is expected to be rejected (used for attack attempts).",
+          "type": "string"
+        },
+        {
+          "const": "any",
+          "description": "Either outcome is acceptable; invariants judge the result.",
+          "type": "string"
+        }
+      ]
+    },
+    "Invariant": {
+      "description": "A checkpoint is the full probe readout at a moment. `before:<opId>` and\n`after:<opId>` exist for every operation.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Every listed probe has the same value at two checkpoints.",
+          "properties": {
+            "from": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "preserved",
+              "type": "string"
+            },
+            "probes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "from",
+            "to",
+            "probes"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "At a checkpoint, the sum of the `parts` probes equals the `total` probe (i128).",
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "sumEquals",
+              "type": "string"
+            },
+            "parts": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            },
+            "total": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "at",
+            "parts",
+            "total"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "At a checkpoint, each probe's value equals an expected value written by the\napplication team (derived from the seed operations, not from the contract).",
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "expect": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "expectedValues",
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "at",
+            "expect"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "At a checkpoint, each probe has the stated storage shape (for example \"i128\"\nfor a legacy entry, \"map\" for a new struct, \"absent\" for a removed key).",
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "expect": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "shapes",
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "at",
+            "expect"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The listed probes are identical before and after an operation (idempotence,\nor \"a rejected/duplicate call changes nothing\").",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "stableAcrossOp",
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "probes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "op",
+            "probes"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The operation must have been rejected (and, in the host, must not have changed\nthe contract's executable). `class` optionally pins the kind of rejection.",
+          "properties": {
+            "class": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ErrorClass"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "opRejected",
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The operation must have succeeded.",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "opSucceeded",
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "title",
+            "op"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Op": {
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "type": "array"
+        },
+        "auth": {
+          "default": [],
+          "description": "Accounts that sign the authorization of this call's root invocation with a\nreal ed25519 signature. Empty means the call carries no authorization at all.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expect": {
+          "$ref": "#/$defs/Expect",
+          "default": "ok"
+        },
+        "fn": {
+          "description": "Contract function to invoke.",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "upgrade": {
+          "default": false,
+          "description": "Marks the operation that replaces the contract's WASM. Exactly one.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "phase",
+        "fn"
+      ],
+      "type": "object"
+    },
+    "Phase": {
+      "enum": [
+        "seed",
+        "upgrade",
+        "postUpgrade"
+      ],
+      "type": "string"
+    },
+    "Probe": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Read through the contract: call a view function.",
+          "properties": {
+            "args": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Value"
+              },
+              "type": "array"
+            },
+            "fn": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "call",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "fn"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Read a raw ledger entry of the contract by storage key, bypassing the\ncontract's own code. Only works in the in-process host.",
+          "properties": {
+            "durability": {
+              "$ref": "#/$defs/Durability"
+            },
+            "id": {
+              "type": "string"
+            },
+            "key": {
+              "$ref": "#/$defs/Value"
+            },
+            "kind": {
+              "const": "storage",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "durability",
+            "key"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Value": {
+      "additionalProperties": false,
+      "description": "One typed value. Exactly one of the value fields must be set. `name` is the\ncontract parameter name; it is required for operation and probe arguments (the\ntestnet mode passes it to the Stellar CLI) and ignored inside nested values.",
+      "properties": {
+        "account": {
+          "description": "Address of a named test account.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bool": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bytes": {
+          "description": "Hex.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contract": {
+          "description": "Address of the deployed contract under test (the only allowed value is \"subject\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "i128": {
+          "description": "Decimal string.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "i32": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "i64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "string": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "symbol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "u128": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "u32": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "u64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variant": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Variant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A `#[contracttype]` enum variant: a vec of [symbol, ...values]."
+        },
+        "vec": {
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "wasmHash": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WhichWasm"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The sha256 hash of the \"old\" or \"new\" WASM as uploaded to the ledger (BytesN<32>)."
+        }
+      },
+      "type": "object"
+    },
+    "Variant": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "values": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Value"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "WasmRefs": {
+      "additionalProperties": false,
+      "properties": {
+        "new": {
+          "description": "Path of the new WASM, relative to `--root`.",
+          "type": "string"
+        },
+        "old": {
+          "description": "Path of the old (currently deployed) WASM, relative to `--root`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "old",
+        "new"
+      ],
+      "type": "object"
+    },
+    "WhichWasm": {
+      "enum": [
+        "old",
+        "new"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "accounts": {
+      "description": "Named test accounts. Each gets a deterministic ed25519 key derived from its\nname; the key and its account exist only inside the in-process ledger.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "invariants": {
+      "items": {
+        "$ref": "#/$defs/Invariant"
+      },
+      "type": "array"
+    },
+    "name": {
+      "type": "string"
+    },
+    "ops": {
+      "description": "Operations in execution order: seed operations on the old WASM, exactly one\nupgrade operation, then post-upgrade operations on the new WASM.",
+      "items": {
+        "$ref": "#/$defs/Op"
+      },
+      "type": "array"
+    },
+    "probes": {
+      "description": "Named reads of contract state, evaluated before and after every operation.",
+      "items": {
+        "$ref": "#/$defs/Probe"
+      },
+      "type": "array"
+    },
+    "scenarioVersion": {
+      "description": "Must be 1.",
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "wasm": {
+      "$ref": "#/$defs/WasmRefs"
+    }
+  },
+  "required": [
+    "scenarioVersion",
+    "name",
+    "wasm",
+    "accounts",
+    "ops",
+    "probes",
+    "invariants"
+  ],
+  "title": "UpgradeLab scenario v1",
+  "type": "object"
+}
