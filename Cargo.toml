@@ -29,7 +29,13 @@ schemars = "1"
 clap = { version = "4", features = ["derive"] }
 
 [profile.dev]
-debug = "line-tables-only"
+debug = 0
+incremental = false
 
 [profile.test]
-debug = "line-tables-only"
+debug = 0
+incremental = false
+
+[[test]]
+name = "it"
+path = "tests/it/main.rs"

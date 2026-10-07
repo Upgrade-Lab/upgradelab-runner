@@ -1,6 +1,6 @@
 //! Exit codes are part of the CLI contract (see README).
-mod common;
-use common::*;
+
+use crate::common::*;
 use std::process::Command;
 
 fn bin() -> Command {

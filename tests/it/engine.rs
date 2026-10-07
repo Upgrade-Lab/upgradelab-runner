@@ -1,7 +1,7 @@
 //! Behaviour of the engine on small purpose-built scenarios: it must never turn
 //! missing evidence into a pass and never turn a failed read into a mismatch.
-mod common;
-use common::*;
+
+use crate::common::*;
 use serde_json::{json, Value};
 use upgradelab::report::Status;
 use upgradelab::scenario::Scenario;

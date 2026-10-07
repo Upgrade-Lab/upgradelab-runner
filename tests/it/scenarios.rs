@@ -1,7 +1,7 @@
 //! Expected outcomes come from the vault's specification (which invariant each
 //! deliberate defect violates), not from whatever the runner printed.
-mod common;
-use common::*;
+
+use crate::common::*;
 use upgradelab::report::Status;
 
 const AUTH_AND_INIT: [&str; 6] = [

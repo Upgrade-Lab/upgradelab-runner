@@ -1,5 +1,4 @@
-mod common;
-use common::*;
+use crate::common::*;
 
 #[test]
 fn the_same_scenario_produces_a_byte_identical_report() {
@@ -72,4 +71,23 @@ fn contract_and_account_identities_are_stable_across_processes() {
     let ids = upgradelab::values::Identities::new(&["alice".to_string()], [0; 32], [0; 32]);
     assert_eq!(ids.contract_strkey(), "CCUASUGBECA42OLBI5XF5MHDRY6ECOAMMLEYNMRLGZTTUITOYDZUJLUZ");
     assert_eq!(ids.account_strkey("alice"), "GC54G35LIXEXRQ6WIAZHQ7DAQXCGNLU2JMJPXXCSOJ2U2FLMWVBMKD75");
+}
+
+#[test]
+fn every_committed_evidence_report_still_replays_identically() {
+    let dir = root().join("evidence/host");
+    let native = root().join("evidence/native/cargo-test-fixtures.txt");
+    let mut n = 0;
+    for e in std::fs::read_dir(&dir).unwrap() {
+        let p = e.unwrap().path();
+        if !p.to_string_lossy().ends_with(".report.json") {
+            continue;
+        }
+        let report: upgradelab::report::Report = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        let log = report.categories.iter().any(|c| c.native.is_some()).then_some(native.as_path());
+        let (_, diffs) = upgradelab::replay(&report, &root(), log).unwrap();
+        assert!(diffs.is_empty(), "{}: {diffs:?}", p.display());
+        n += 1;
+    }
+    assert_eq!(n, 6);
 }
