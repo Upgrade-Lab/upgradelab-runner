@@ -6,13 +6,14 @@
 //! network and not a validator: no consensus, no fees, no transaction envelope, no
 //! state archival or restore. See docs/adr/0002-in-process-host.md.
 //!
-//! Authorization is ENFORCED, not mocked. The environment starts with no
-//! authorization entries. Each call is given real `SorobanAuthorizationEntry`s that
+//! Authorization is ENFORCED, not mocked.
+//!
+//! The environment starts with no authorization entries. Each call is given real `SorobanAuthorizationEntry`s that
 //! the named accounts sign with ed25519 over the standard signature payload, and the
-//! host verifies those signatures against account ledger entries (master key weight
-//! 1) and consumes a nonce. `mock_all_auths` / `mock_auths` are never used. What it
+//! host verifies those signatures against account ledger entries (master key
+//! weight one) and consumes a nonce. `mock_all_auths` / `mock_auths` are never used. What it
 //! does NOT test: multi-signer accounts and thresholds, custom account contracts,
-//! signature expiration beyond the fixed +100 ledgers, and nothing about how a real
+//! signature expiration beyond the fixed hundred ledgers, and nothing about how a real
 //! wallet builds the entry.
 
 use crate::backend::{Backend, InvokeRecord, RunnerError};
@@ -24,12 +25,11 @@ use sha2::{Digest, Sha256};
 use soroban_ledger_snapshot::LedgerSnapshot;
 use soroban_sdk::testutils::{EnvTestConfig, Ledger as _};
 use soroban_sdk::xdr::{
-    AccountEntry, AccountEntryExt, ContractExecutable, ContractEventBody, HashIdPreimage,
-    HashIdPreimageSorobanAuthorization, InvokeContractArgs, LedgerEntry, LedgerEntryData,
-    LedgerEntryExt, LedgerKey, LedgerKeyAccount, Limits, ScAddress, ScError, ScMap, ScMapEntry,
-    ScSymbol, ScVal, ScVec, SequenceNumber, SorobanAddressCredentials, SorobanAuthorizationEntry,
-    SorobanAuthorizedFunction, SorobanAuthorizedInvocation, SorobanCredentials, Thresholds,
-    WriteXdr,
+    AccountEntry, AccountEntryExt, ContractEventBody, ContractExecutable, HashIdPreimage,
+    HashIdPreimageSorobanAuthorization, InvokeContractArgs, LedgerEntry, LedgerEntryData, LedgerEntryExt, LedgerKey,
+    LedgerKeyAccount, Limits, ScAddress, ScError, ScMap, ScMapEntry, ScSymbol, ScVal, ScVec, SequenceNumber,
+    SorobanAddressCredentials, SorobanAuthorizationEntry, SorobanAuthorizedFunction, SorobanAuthorizedInvocation,
+    SorobanCredentials, Thresholds, WriteXdr,
 };
 use soroban_sdk::{Address, Bytes, Env, Symbol, TryFromVal, Val, Vec as SVec};
 
@@ -50,11 +50,7 @@ fn sha256_hex(b: &[u8]) -> String {
 }
 
 impl HostBackend {
-    pub fn new(
-        accounts: &[String],
-        wasm_old: &[u8],
-        wasm_new: &[u8],
-    ) -> Result<Self, RunnerError> {
+    pub fn new(accounts: &[String], wasm_old: &[u8], wasm_new: &[u8]) -> Result<Self, RunnerError> {
         let old_hash: [u8; 32] = Sha256::digest(wasm_old).into();
         let new_hash: [u8; 32] = Sha256::digest(wasm_new).into();
         let ids = Identities::new(accounts, old_hash, new_hash);
@@ -112,7 +108,12 @@ impl HostBackend {
         args.iter().map(|a| to_scval(a, &self.ids).map_err(RunnerError)).collect()
     }
 
-    fn sign_entry(&mut self, signer: &str, function: &str, args: &[ScVal]) -> Result<SorobanAuthorizationEntry, RunnerError> {
+    fn sign_entry(
+        &mut self,
+        signer: &str,
+        function: &str,
+        args: &[ScVal],
+    ) -> Result<SorobanAuthorizationEntry, RunnerError> {
         self.sign_entry_with(signer, signer, function, args)
     }
 
@@ -129,7 +130,7 @@ impl HostBackend {
         self.nonce += 1;
         let nonce = self.nonce;
         let exp = self.env.ledger().sequence() + SIG_EXPIRY_LEDGERS;
-        let ScAddress::Contract(cid) = ScAddress::try_from(&self.contract).map_err(|e| RunnerError(format!("{e:?}")))? else {
+        let ScAddress::Contract(cid) = ScAddress::from(&self.contract) else {
             return Err(RunnerError("subject is not a contract address".into()));
         };
         let invocation = SorobanAuthorizedInvocation {
@@ -191,12 +192,15 @@ impl HostBackend {
             return Err(RunnerError(format!("function name `{function}` is not a valid Soroban symbol")));
         }
         let before = self.diag_len();
-        let res = self
-            .env
-            .try_invoke_contract::<Val, soroban_sdk::Error>(&self.contract, &Symbol::new(&self.env, function), vals);
+        let res = self.env.try_invoke_contract::<Val, soroban_sdk::Error>(
+            &self.contract,
+            &Symbol::new(&self.env, function),
+            vals,
+        );
         let outcome = match res {
             Ok(Ok(v)) => {
-                let sc = ScVal::try_from_val(&self.env, &v).map_err(|e| RunnerError(format!("result conversion: {e:?}")))?;
+                let sc =
+                    ScVal::try_from_val(&self.env, &v).map_err(|e| RunnerError(format!("result conversion: {e:?}")))?;
                 let (shape, value) = render(&sc, &self.ids.names);
                 Outcome { status: "ok".into(), shape: Some(shape), value: Some(value), error: None }
             }
@@ -204,14 +208,24 @@ impl HostBackend {
                 status: "error".into(),
                 shape: None,
                 value: None,
-                error: Some(ErrorInfo { class: "other".into(), host_error: format!("result conversion: {e:?}"), contract_code: None, message: "return value did not convert".into() }),
+                error: Some(ErrorInfo {
+                    class: "other".into(),
+                    host_error: format!("result conversion: {e:?}"),
+                    contract_code: None,
+                    message: "return value did not convert".into(),
+                }),
             },
             Err(e) => {
                 let fallback = match &e {
                     Ok(err) => format!("{err:?}"),
                     Err(ie) => format!("{ie:?}"),
                 };
-                Outcome { status: "error".into(), shape: None, value: None, error: Some(self.error_from_events(before, &fallback)) }
+                Outcome {
+                    status: "error".into(),
+                    shape: None,
+                    value: None,
+                    error: Some(self.error_from_events(before, &fallback)),
+                }
             }
         };
         let observed_auth = self.observed_auths();
@@ -264,7 +278,12 @@ impl HostBackend {
                 };
                 ErrorInfo { class: class.into(), host_error, contract_code: code, message }
             }
-            None => ErrorInfo { class: "other".into(), host_error: fallback.to_string(), contract_code: None, message: "no diagnostic error event captured".into() },
+            None => ErrorInfo {
+                class: "other".into(),
+                host_error: fallback.to_string(),
+                contract_code: None,
+                message: "no diagnostic error event captured".into(),
+            },
         }
     }
 
@@ -341,15 +360,17 @@ impl Backend for HostBackend {
                     Err(e) => return ProbeReading { ok: false, shape: None, value: None, error: Some(e.0) },
                 };
                 match self.call(function, &args, &[]) {
-                    Ok(r) if r.outcome.status == "ok" => ProbeReading {
-                        ok: true,
-                        shape: r.outcome.shape,
-                        value: r.outcome.value,
-                        error: None,
-                    },
+                    Ok(r) if r.outcome.status == "ok" => {
+                        ProbeReading { ok: true, shape: r.outcome.shape, value: r.outcome.value, error: None }
+                    }
                     Ok(r) => {
                         let e = r.outcome.error.unwrap();
-                        ProbeReading { ok: false, shape: None, value: None, error: Some(format!("{}: {} {}", e.class, e.host_error, e.message).trim().to_string()) }
+                        ProbeReading {
+                            ok: false,
+                            shape: None,
+                            value: None,
+                            error: Some(format!("{}: {} {}", e.class, e.host_error, e.message).trim().to_string()),
+                        }
                     }
                     Err(e) => ProbeReading { ok: false, shape: None, value: None, error: Some(e.0) },
                 }
@@ -362,7 +383,14 @@ impl Backend for HostBackend {
                 };
                 let key_val = match Val::try_from_val(&self.env, &sc) {
                     Ok(v) => v,
-                    Err(e) => return ProbeReading { ok: false, shape: None, value: None, error: Some(format!("key conversion: {e:?}")) },
+                    Err(e) => {
+                        return ProbeReading {
+                            ok: false,
+                            shape: None,
+                            value: None,
+                            error: Some(format!("key conversion: {e:?}")),
+                        }
+                    }
                 };
                 let env = &self.env;
                 let found: Option<Val> = env.as_contract(&self.contract, || match durability {
@@ -370,10 +398,20 @@ impl Backend for HostBackend {
                     Durability::Instance => env.storage().instance().get::<Val, Val>(&key_val),
                 });
                 match found {
-                    None => ProbeReading { ok: true, shape: Some("absent".into()), value: Some(serde_json::Value::Null), error: None },
+                    None => ProbeReading {
+                        ok: true,
+                        shape: Some("absent".into()),
+                        value: Some(serde_json::Value::Null),
+                        error: None,
+                    },
                     Some(v) => match ScVal::try_from_val(&self.env, &v) {
                         Ok(sc) => self.reading_from_scval(&sc),
-                        Err(e) => ProbeReading { ok: false, shape: None, value: None, error: Some(format!("value conversion: {e:?}")) },
+                        Err(e) => ProbeReading {
+                            ok: false,
+                            shape: None,
+                            value: None,
+                            error: Some(format!("value conversion: {e:?}")),
+                        },
                     },
                 }
             }
@@ -382,7 +420,7 @@ impl Backend for HostBackend {
 
     fn executable_hash(&mut self) -> Option<String> {
         let snap = self.env.to_ledger_snapshot();
-        let ScAddress::Contract(cid) = ScAddress::try_from(&self.contract).ok()? else { return None };
+        let ScAddress::Contract(cid) = ScAddress::from(&self.contract) else { return None };
         for (key, (entry, _)) in snap.ledger_entries.iter() {
             if let LedgerKey::ContractData(k) = key.as_ref() {
                 if k.contract == ScAddress::Contract(cid.clone()) && k.key == ScVal::LedgerKeyContractInstance {
@@ -469,7 +507,7 @@ mod tests {
         let mut b = backend();
         let args = admin_arg(&b);
         let e = b.sign_entry("admin", "initialize", &args).unwrap();
-        b.env.set_auths(&[e.clone()]);
+        b.env.set_auths(std::slice::from_ref(&e));
         assert_eq!(b.call_with_current_auths("initialize", &args).outcome.status, "ok");
         // Same signed entry again: the contract would reject a second initialize anyway,
         // so replay it against deposit-free admin() view is not meaningful; instead
@@ -479,7 +517,7 @@ mod tests {
             ScVal::I128(soroban_sdk::xdr::Int128Parts { hi: 0, lo: 5 }),
         ];
         let e2 = b.sign_entry("admin", "deposit", &dep_args).unwrap();
-        b.env.set_auths(&[e2.clone()]);
+        b.env.set_auths(std::slice::from_ref(&e2));
         assert_eq!(b.call_with_current_auths("deposit", &dep_args).outcome.status, "ok");
         b.env.set_auths(&[e2]);
         let replay = b.call_with_current_auths("deposit", &dep_args);
