@@ -137,7 +137,8 @@ pub struct Outcome {
     pub status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shape: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "some_even_if_null")]
+    #[schemars(with = "Option<serde_json::Value>")]
     pub value: Option<Json>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<ErrorInfo>,
@@ -185,7 +186,8 @@ pub struct ProbeReading {
     pub ok: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shape: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "some_even_if_null")]
+    #[schemars(with = "Option<serde_json::Value>")]
     pub value: Option<Json>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
@@ -260,6 +262,12 @@ pub struct NetworkInfo {
     pub wasm_hash_new: String,
     /// Accounts are throwaway testnet keys; their public keys.
     pub accounts: BTreeMap<String, String>,
+}
+
+/// A present `null` must stay `Some(Null)` (an absent storage key reads as null);
+/// serde's default turns it into `None`, which would break report round trips.
+fn some_even_if_null<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<Json>, D::Error> {
+    Json::deserialize(d).map(Some)
 }
 
 pub fn phase_str(p: Phase) -> &'static str {
