@@ -1,0 +1,24 @@
+[package]
+name = "vault-v2"
+description = "UpgradeLab fixture: vault v2 with a migration to a new balance format, plus deliberately broken variants behind features. Not audited, not for production."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[features]
+# Each feature compiles ONE deliberate defect. Never enable more than one at a time.
+broken-lose-balance = []
+broken-double-balance = []
+broken-reinit = []
+broken-upgrade-auth = []
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
