@@ -7,6 +7,7 @@
     {"file": "vault_v2_broken_lose_balance.wasm", "package": "vault-v2", "features": "broken-lose-balance", "bytes": 4993, "sha256": "6abf198abe1d54bc20b5f98eb0b88da57f8a1ebad5939ecf12adbdea9ccea5ee"},
     {"file": "vault_v2_broken_double_balance.wasm", "package": "vault-v2", "features": "broken-double-balance", "bytes": 4987, "sha256": "0fa8968bae6431c01bc9591b8f21f4da892329a61a0b455de7d1683965db147c"},
     {"file": "vault_v2_broken_reinit.wasm", "package": "vault-v2", "features": "broken-reinit", "bytes": 4926, "sha256": "d53ab196b0e49478664218bee9f96922e6344f5e97fa8a06a9028c0f5a7e6a23"},
-    {"file": "vault_v2_broken_upgrade_auth.wasm", "package": "vault-v2", "features": "broken-upgrade-auth", "bytes": 4958, "sha256": "20fbe6059e42d29e6c11de1f399fad3f8a0822c22232122749120544c3efe725"}
+    {"file": "vault_v2_broken_upgrade_auth.wasm", "package": "vault-v2", "features": "broken-upgrade-auth", "bytes": 4958, "sha256": "20fbe6059e42d29e6c11de1f399fad3f8a0822c22232122749120544c3efe725"},
+    {"file": "vault_v2_broken_not_idempotent.wasm", "package": "vault-v2", "features": "broken-not-idempotent", "bytes": 5186, "sha256": "3e989d16b96c1a3a8eb6fbf9e73dfe320f49cb73d3f66cf782ae4e1729d397c2"}
   ]
 }

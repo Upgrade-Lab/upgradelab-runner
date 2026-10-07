@@ -29,6 +29,7 @@ build vault_v2_broken_lose_balance vault-v2 broken-lose-balance
 build vault_v2_broken_double_balance vault-v2 broken-double-balance
 build vault_v2_broken_reinit vault-v2 broken-reinit
 build vault_v2_broken_upgrade_auth vault-v2 broken-upgrade-auth
+build vault_v2_broken_not_idempotent vault-v2 broken-not-idempotent
 
 {
   echo '{'
