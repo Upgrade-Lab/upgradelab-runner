@@ -1,0 +1,6 @@
+vault-broken-double-balance 1
+vault-broken-lose-balance 1
+vault-broken-not-idempotent 1
+vault-broken-reinit 1
+vault-broken-upgrade-auth 1
+vault-correct 0

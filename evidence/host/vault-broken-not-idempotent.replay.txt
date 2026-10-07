@@ -1,0 +1,1 @@
+REPRODUCED: re-running `vault-broken-not-idempotent` produced an identical report (verdict fail).

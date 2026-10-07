@@ -1,0 +1,1 @@
+REPRODUCED: re-running `vault-broken-lose-balance` produced an identical report (verdict fail).

@@ -1,0 +1,4790 @@
+{
+  "reportVersion": 1,
+  "kind": "upgradelab-report",
+  "tool": {
+    "name": "upgradelab-runner",
+    "runnerVersion": "0.1.0",
+    "sorobanSdk": "28.0.0",
+    "hostProtocol": 28,
+    "mode": "in-process-host",
+    "authEnforcement": "Enforced, not mocked: no authorization is present unless a named account signs it. Each call carries SorobanAuthorizationEntry values signed with ed25519 over the standard payload (network id, nonce, expiry, invocation); the host verifies the signature against the account's ledger entry (master weight 1) and consumes the nonce. mock_all_auths and mock_auths are never used. Single-key accounts only."
+  },
+  "scenario": {
+    "name": "vault-correct",
+    "sha256": "2f6ef5a44d4ce9e66a8ce8c1de30e05f16a4ad91ecd8b8cd1cea7d35c6e62efa",
+    "definition": {
+      "scenarioVersion": 1,
+      "name": "vault-correct",
+      "description": "Corrected migration: preserves balances, handles mixed old/new entries, idempotent, guarded init and upgrade. Seeded on vault v1, upgraded with update_current_contract_wasm, then migrated.",
+      "wasm": {
+        "old": "fixtures/wasm/vault_v1.wasm",
+        "new": "fixtures/wasm/vault_v2_correct.wasm"
+      },
+      "accounts": [
+        "admin",
+        "alice",
+        "bob",
+        "carol",
+        "dave",
+        "mallory"
+      ],
+      "ops": [
+        {
+          "id": "s-init",
+          "phase": "seed",
+          "fn": "initialize",
+          "args": [
+            {
+              "name": "admin",
+              "account": "admin"
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-alice-1",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "alice"
+            },
+            {
+              "name": "amount",
+              "i128": "100"
+            }
+          ],
+          "auth": [
+            "alice"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-bob",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "bob"
+            },
+            {
+              "name": "amount",
+              "i128": "250"
+            }
+          ],
+          "auth": [
+            "bob"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-carol",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "carol"
+            },
+            {
+              "name": "amount",
+              "i128": "75"
+            }
+          ],
+          "auth": [
+            "carol"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-dave",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "dave"
+            },
+            {
+              "name": "amount",
+              "i128": "40"
+            }
+          ],
+          "auth": [
+            "dave"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "s-alice-2",
+          "phase": "seed",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "alice"
+            },
+            {
+              "name": "amount",
+              "i128": "25"
+            }
+          ],
+          "auth": [
+            "alice"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "attack-old-no-auth",
+          "phase": "seed",
+          "fn": "upgrade",
+          "args": [
+            {
+              "name": "new_wasm_hash",
+              "wasmHash": "new"
+            }
+          ],
+          "auth": [],
+          "expect": "error",
+          "upgrade": false,
+          "note": "Attack on the OLD contract: anyone calls upgrade with no authorization. Must be rejected by the host."
+        },
+        {
+          "id": "upgrade",
+          "phase": "upgrade",
+          "fn": "upgrade",
+          "args": [
+            {
+              "name": "new_wasm_hash",
+              "wasmHash": "new"
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": true,
+          "note": "The real upgrade: the admin signs the call; the contract calls update_current_contract_wasm."
+        },
+        {
+          "id": "p-alice-deposit",
+          "phase": "postUpgrade",
+          "fn": "deposit",
+          "args": [
+            {
+              "name": "from",
+              "account": "alice"
+            },
+            {
+              "name": "amount",
+              "i128": "50"
+            }
+          ],
+          "auth": [
+            "alice"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "p-migrate-partial",
+          "phase": "postUpgrade",
+          "fn": "migrate",
+          "args": [
+            {
+              "name": "limit",
+              "u32": 2
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": false,
+          "note": "Batched migration: convert at most 2 legacy balances."
+        },
+        {
+          "id": "p-migrate-rest",
+          "phase": "postUpgrade",
+          "fn": "migrate",
+          "args": [
+            {
+              "name": "limit",
+              "u32": 10
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": false
+        },
+        {
+          "id": "p-migrate-again",
+          "phase": "postUpgrade",
+          "fn": "migrate",
+          "args": [
+            {
+              "name": "limit",
+              "u32": 10
+            }
+          ],
+          "auth": [
+            "admin"
+          ],
+          "expect": "ok",
+          "upgrade": false,
+          "note": "Repeated migration call: must change nothing."
+        },
+        {
+          "id": "attack-upgrade-no-auth",
+          "phase": "postUpgrade",
+          "fn": "upgrade",
+          "args": [
+            {
+              "name": "new_wasm_hash",
+              "wasmHash": "old"
+            }
+          ],
+          "auth": [],
+          "expect": "error",
+          "upgrade": false,
+          "note": "Attack on the NEW contract: no authorization at all, tries to roll the code back."
+        },
+        {
+          "id": "attack-upgrade-self-auth",
+          "phase": "postUpgrade",
+          "fn": "upgrade",
+          "args": [
+            {
+              "name": "new_wasm_hash",
+              "wasmHash": "old"
+            }
+          ],
+          "auth": [
+            "mallory"
+          ],
+          "expect": "error",
+          "upgrade": false,
+          "note": "Attack on the NEW contract: mallory signs a valid authorization for herself, which is not the admin."
+        },
+        {
+          "id": "attack-reinit",
+          "phase": "postUpgrade",
+          "fn": "initialize",
+          "args": [
+            {
+              "name": "admin",
+              "account": "mallory"
+            }
+          ],
+          "auth": [
+            "mallory"
+          ],
+          "expect": "error",
+          "upgrade": false,
+          "note": "Repeated initialization by a stranger who authorizes her own call."
+        }
+      ],
+      "probes": [
+        {
+          "kind": "call",
+          "id": "balance-alice",
+          "fn": "balance",
+          "args": [
+            {
+              "name": "who",
+              "account": "alice"
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "id": "balance-bob",
+          "fn": "balance",
+          "args": [
+            {
+              "name": "who",
+              "account": "bob"
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "id": "balance-carol",
+          "fn": "balance",
+          "args": [
+            {
+              "name": "who",
+              "account": "carol"
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "id": "balance-dave",
+          "fn": "balance",
+          "args": [
+            {
+              "name": "who",
+              "account": "dave"
+            }
+          ]
+        },
+        {
+          "kind": "call",
+          "id": "total-supply",
+          "fn": "total_supply",
+          "args": []
+        },
+        {
+          "kind": "call",
+          "id": "admin",
+          "fn": "admin",
+          "args": []
+        },
+        {
+          "kind": "call",
+          "id": "holders",
+          "fn": "holders",
+          "args": []
+        },
+        {
+          "kind": "storage",
+          "id": "raw-legacy-alice",
+          "durability": "persistent",
+          "key": {
+            "variant": {
+              "name": "Balance",
+              "values": [
+                {
+                  "account": "alice"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "storage",
+          "id": "raw-legacy-bob",
+          "durability": "persistent",
+          "key": {
+            "variant": {
+              "name": "Balance",
+              "values": [
+                {
+                  "account": "bob"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "storage",
+          "id": "raw-legacy-carol",
+          "durability": "persistent",
+          "key": {
+            "variant": {
+              "name": "Balance",
+              "values": [
+                {
+                  "account": "carol"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "storage",
+          "id": "raw-legacy-dave",
+          "durability": "persistent",
+          "key": {
+            "variant": {
+              "name": "Balance",
+              "values": [
+                {
+                  "account": "dave"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "storage",
+          "id": "raw-v2-alice",
+          "durability": "persistent",
+          "key": {
+            "variant": {
+              "name": "BalanceV2",
+              "values": [
+                {
+                  "account": "alice"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "storage",
+          "id": "raw-v2-bob",
+          "durability": "persistent",
+          "key": {
+            "variant": {
+              "name": "BalanceV2",
+              "values": [
+                {
+                  "account": "bob"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "storage",
+          "id": "raw-v2-carol",
+          "durability": "persistent",
+          "key": {
+            "variant": {
+              "name": "BalanceV2",
+              "values": [
+                {
+                  "account": "carol"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "storage",
+          "id": "raw-v2-dave",
+          "durability": "persistent",
+          "key": {
+            "variant": {
+              "name": "BalanceV2",
+              "values": [
+                {
+                  "account": "dave"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "invariants": [
+        {
+          "kind": "preserved",
+          "id": "balances-preserved-across-upgrade",
+          "title": "Every seeded balance, the total supply and the holder list are identical immediately before and after the upgrade",
+          "from": "before:upgrade",
+          "to": "after:upgrade",
+          "probes": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave",
+            "total-supply",
+            "holders"
+          ]
+        },
+        {
+          "kind": "preserved",
+          "id": "admin-unchanged-across-upgrade",
+          "title": "The admin address is unchanged by the upgrade",
+          "from": "before:upgrade",
+          "to": "after:upgrade",
+          "probes": [
+            "admin"
+          ]
+        },
+        {
+          "kind": "sumEquals",
+          "id": "supply-equals-sum-after-upgrade",
+          "title": "Total supply equals the sum of balances right after the upgrade",
+          "at": "after:upgrade",
+          "parts": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave"
+          ],
+          "total": "total-supply"
+        },
+        {
+          "kind": "shapes",
+          "id": "mixed-format-state-exercised",
+          "title": "Mixed-format state is really present: alice (touched after the upgrade) is in the new format, the others are still in the old format",
+          "at": "after:p-alice-deposit",
+          "expect": {
+            "raw-legacy-alice": "absent",
+            "raw-legacy-bob": "i128",
+            "raw-legacy-carol": "i128",
+            "raw-legacy-dave": "i128",
+            "raw-v2-alice": "map",
+            "raw-v2-bob": "absent",
+            "raw-v2-carol": "absent",
+            "raw-v2-dave": "absent"
+          }
+        },
+        {
+          "kind": "expectedValues",
+          "id": "mixed-format-balances-correct",
+          "title": "With old and new entries side by side, every balance reads back as the seed operations imply",
+          "at": "after:p-alice-deposit",
+          "expect": {
+            "balance-alice": "175",
+            "balance-bob": "250",
+            "balance-carol": "75",
+            "balance-dave": "40",
+            "total-supply": "540"
+          }
+        },
+        {
+          "kind": "expectedValues",
+          "id": "partial-migration-preserves-balances",
+          "title": "After a partial (batched) migration every balance is still correct",
+          "at": "after:p-migrate-partial",
+          "expect": {
+            "balance-alice": "175",
+            "balance-bob": "250",
+            "balance-carol": "75",
+            "balance-dave": "40",
+            "total-supply": "540"
+          }
+        },
+        {
+          "kind": "expectedValues",
+          "id": "seeded-balances-preserved-after-migration",
+          "title": "After the migration every seeded balance equals the value the seed operations imply",
+          "at": "after:p-migrate-rest",
+          "expect": {
+            "balance-alice": "175",
+            "balance-bob": "250",
+            "balance-carol": "75",
+            "balance-dave": "40",
+            "total-supply": "540"
+          }
+        },
+        {
+          "kind": "sumEquals",
+          "id": "supply-equals-sum-after-migration",
+          "title": "Total supply equals the sum of balances after the migration",
+          "at": "after:p-migrate-rest",
+          "parts": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave"
+          ],
+          "total": "total-supply"
+        },
+        {
+          "kind": "preserved",
+          "id": "admin-unchanged-after-migration",
+          "title": "The admin address is unchanged after the whole upgrade and migration",
+          "from": "before:upgrade",
+          "to": "after:p-migrate-rest",
+          "probes": [
+            "admin"
+          ]
+        },
+        {
+          "kind": "shapes",
+          "id": "migration-converts-every-entry",
+          "title": "After the migration no legacy entry remains and every holder has a new-format entry",
+          "at": "after:p-migrate-rest",
+          "expect": {
+            "raw-legacy-alice": "absent",
+            "raw-legacy-bob": "absent",
+            "raw-legacy-carol": "absent",
+            "raw-legacy-dave": "absent",
+            "raw-v2-alice": "map",
+            "raw-v2-bob": "map",
+            "raw-v2-carol": "map",
+            "raw-v2-dave": "map"
+          }
+        },
+        {
+          "kind": "stableAcrossOp",
+          "id": "migration-idempotent",
+          "title": "Calling migrate again changes nothing (balances, supply, admin, holders and raw storage)",
+          "op": "p-migrate-again",
+          "probes": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave",
+            "total-supply",
+            "admin",
+            "holders",
+            "raw-legacy-alice",
+            "raw-legacy-bob",
+            "raw-legacy-carol",
+            "raw-legacy-dave",
+            "raw-v2-alice",
+            "raw-v2-bob",
+            "raw-v2-carol",
+            "raw-v2-dave"
+          ]
+        },
+        {
+          "kind": "opRejected",
+          "id": "unauthorized-upgrade-rejected-old-contract",
+          "title": "An unauthenticated upgrade of the old contract is rejected and the executable is unchanged",
+          "op": "attack-old-no-auth",
+          "class": "auth"
+        },
+        {
+          "kind": "opRejected",
+          "id": "unauthorized-upgrade-rejected-no-auth",
+          "title": "An unauthenticated upgrade of the new contract is rejected and the executable is unchanged",
+          "op": "attack-upgrade-no-auth",
+          "class": "auth"
+        },
+        {
+          "kind": "opRejected",
+          "id": "unauthorized-upgrade-rejected-self-signed",
+          "title": "An upgrade signed by a non-admin account is rejected and the executable is unchanged",
+          "op": "attack-upgrade-self-auth",
+          "class": "auth"
+        },
+        {
+          "kind": "opRejected",
+          "id": "reinitialize-rejected",
+          "title": "A repeated initialize by a stranger is rejected by the contract",
+          "op": "attack-reinit",
+          "class": "contract"
+        },
+        {
+          "kind": "stableAcrossOp",
+          "id": "reinitialize-changes-nothing",
+          "title": "A repeated initialize leaves admin, supply, holders and balances untouched",
+          "op": "attack-reinit",
+          "probes": [
+            "balance-alice",
+            "balance-bob",
+            "balance-carol",
+            "balance-dave",
+            "total-supply",
+            "admin",
+            "holders",
+            "raw-legacy-alice",
+            "raw-legacy-bob",
+            "raw-legacy-carol",
+            "raw-legacy-dave",
+            "raw-v2-alice",
+            "raw-v2-bob",
+            "raw-v2-carol",
+            "raw-v2-dave"
+          ]
+        }
+      ]
+    }
+  },
+  "wasm": {
+    "old": {
+      "path": "fixtures/wasm/vault_v1.wasm",
+      "sha256": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+      "bytes": 3353
+    },
+    "new": {
+      "path": "fixtures/wasm/vault_v2_correct.wasm",
+      "sha256": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+      "bytes": 4960
+    }
+  },
+  "categories": [
+    {
+      "id": "compiled-wasm",
+      "title": "Compiled WASM in the in-process Soroban host",
+      "status": "executed",
+      "detail": "The old and new .wasm files were uploaded to an in-process ledger and every operation below ran inside the Soroban host VM."
+    },
+    {
+      "id": "native-sdk",
+      "title": "Native SDK tests (Rust, mocked auth, not the VM)",
+      "status": "recorded-input",
+      "detail": "Not run by this runner. Parsed from a cargo test log you supplied (sha256 50c85b53702a7378f4ac670dc8a2fc31b23ebf2e693b542aa13349b76b279a56): 7 passed, 0 failed. These tests link the contract as native Rust and are a different category from the compiled-WASM results.",
+      "native": {
+        "logSha256": "50c85b53702a7378f4ac670dc8a2fc31b23ebf2e693b542aa13349b76b279a56",
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0,
+        "tests": [
+          {
+            "name": "test::correct::batched_migration_reports_remaining",
+            "result": "ok"
+          },
+          {
+            "name": "test::correct::migrate_preserves_balances_and_is_idempotent",
+            "result": "ok"
+          },
+          {
+            "name": "test::correct::mixed_format_reads_and_writes",
+            "result": "ok"
+          },
+          {
+            "name": "test::correct::reinitialize_is_rejected",
+            "result": "ok"
+          },
+          {
+            "name": "test::deposit_withdraw_track_supply",
+            "result": "ok"
+          },
+          {
+            "name": "test::initialize_twice_is_rejected",
+            "result": "ok"
+          },
+          {
+            "name": "test::overdraw_is_rejected",
+            "result": "ok"
+          }
+        ]
+      }
+    },
+    {
+      "id": "testnet-rpc",
+      "title": "Stellar testnet",
+      "status": "not-run",
+      "detail": "Opt-in `upgradelab testnet` mode; not used for this report."
+    }
+  ],
+  "executedOps": [
+    {
+      "seq": 1,
+      "id": "deploy-old",
+      "phase": "system",
+      "fn": "register_wasm",
+      "args": [
+        {
+          "name": "wasmSha256",
+          "shape": "string",
+          "value": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+        }
+      ],
+      "signers": [],
+      "outcome": {
+        "status": "ok"
+      },
+      "expectation": "n/a",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 2,
+      "id": "upload-new",
+      "phase": "system",
+      "fn": "upload_contract_wasm",
+      "args": [
+        {
+          "name": "wasmSha256",
+          "shape": "string",
+          "value": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+        }
+      ],
+      "signers": [],
+      "outcome": {
+        "status": "ok"
+      },
+      "expectation": "n/a",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 3,
+      "id": "s-init",
+      "phase": "seed",
+      "fn": "initialize",
+      "args": [
+        {
+          "name": "admin",
+          "shape": "address",
+          "value": "admin"
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "void",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "admin",
+          "contract": "subject",
+          "fn": "initialize",
+          "args": [
+            "admin"
+          ]
+        }
+      ],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 4,
+      "id": "s-alice-1",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "alice"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "100"
+        }
+      ],
+      "signers": [
+        "alice"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "void",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "alice",
+          "contract": "subject",
+          "fn": "deposit",
+          "args": [
+            "alice",
+            "100"
+          ]
+        }
+      ],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 5,
+      "id": "s-bob",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "bob"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "250"
+        }
+      ],
+      "signers": [
+        "bob"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "void",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "bob",
+          "contract": "subject",
+          "fn": "deposit",
+          "args": [
+            "bob",
+            "250"
+          ]
+        }
+      ],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 6,
+      "id": "s-carol",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "carol"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "75"
+        }
+      ],
+      "signers": [
+        "carol"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "void",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "carol",
+          "contract": "subject",
+          "fn": "deposit",
+          "args": [
+            "carol",
+            "75"
+          ]
+        }
+      ],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 7,
+      "id": "s-dave",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "dave"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "40"
+        }
+      ],
+      "signers": [
+        "dave"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "void",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "dave",
+          "contract": "subject",
+          "fn": "deposit",
+          "args": [
+            "dave",
+            "40"
+          ]
+        }
+      ],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 8,
+      "id": "s-alice-2",
+      "phase": "seed",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "alice"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "25"
+        }
+      ],
+      "signers": [
+        "alice"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "void",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "alice",
+          "contract": "subject",
+          "fn": "deposit",
+          "args": [
+            "alice",
+            "25"
+          ]
+        }
+      ],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 9,
+      "id": "attack-old-no-auth",
+      "phase": "seed",
+      "fn": "upgrade",
+      "args": [
+        {
+          "name": "new_wasm_hash",
+          "shape": "bytes",
+          "value": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+        }
+      ],
+      "signers": [],
+      "outcome": {
+        "status": "error",
+        "error": {
+          "class": "auth",
+          "hostError": "Auth(InvalidAction)",
+          "message": "Unauthorized function call for address"
+        }
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+    },
+    {
+      "seq": 10,
+      "id": "upgrade",
+      "phase": "upgrade",
+      "fn": "upgrade",
+      "args": [
+        {
+          "name": "new_wasm_hash",
+          "shape": "bytes",
+          "value": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "void",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "admin",
+          "contract": "subject",
+          "fn": "upgrade",
+          "args": [
+            "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+          ]
+        }
+      ],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    },
+    {
+      "seq": 11,
+      "id": "p-alice-deposit",
+      "phase": "postUpgrade",
+      "fn": "deposit",
+      "args": [
+        {
+          "name": "from",
+          "shape": "address",
+          "value": "alice"
+        },
+        {
+          "name": "amount",
+          "shape": "i128",
+          "value": "50"
+        }
+      ],
+      "signers": [
+        "alice"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "void",
+        "value": null
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "alice",
+          "contract": "subject",
+          "fn": "deposit",
+          "args": [
+            "alice",
+            "50"
+          ]
+        }
+      ],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    },
+    {
+      "seq": 12,
+      "id": "p-migrate-partial",
+      "phase": "postUpgrade",
+      "fn": "migrate",
+      "args": [
+        {
+          "name": "limit",
+          "shape": "u32",
+          "value": 2
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "u32",
+        "value": 1
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "admin",
+          "contract": "subject",
+          "fn": "migrate",
+          "args": [
+            2
+          ]
+        }
+      ],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    },
+    {
+      "seq": 13,
+      "id": "p-migrate-rest",
+      "phase": "postUpgrade",
+      "fn": "migrate",
+      "args": [
+        {
+          "name": "limit",
+          "shape": "u32",
+          "value": 10
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "u32",
+        "value": 0
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "admin",
+          "contract": "subject",
+          "fn": "migrate",
+          "args": [
+            10
+          ]
+        }
+      ],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    },
+    {
+      "seq": 14,
+      "id": "p-migrate-again",
+      "phase": "postUpgrade",
+      "fn": "migrate",
+      "args": [
+        {
+          "name": "limit",
+          "shape": "u32",
+          "value": 10
+        }
+      ],
+      "signers": [
+        "admin"
+      ],
+      "outcome": {
+        "status": "ok",
+        "shape": "u32",
+        "value": 0
+      },
+      "expectation": "met",
+      "observedAuth": [
+        {
+          "address": "admin",
+          "contract": "subject",
+          "fn": "migrate",
+          "args": [
+            10
+          ]
+        }
+      ],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    },
+    {
+      "seq": 15,
+      "id": "attack-upgrade-no-auth",
+      "phase": "postUpgrade",
+      "fn": "upgrade",
+      "args": [
+        {
+          "name": "new_wasm_hash",
+          "shape": "bytes",
+          "value": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+        }
+      ],
+      "signers": [],
+      "outcome": {
+        "status": "error",
+        "error": {
+          "class": "auth",
+          "hostError": "Auth(InvalidAction)",
+          "message": "Unauthorized function call for address"
+        }
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    },
+    {
+      "seq": 16,
+      "id": "attack-upgrade-self-auth",
+      "phase": "postUpgrade",
+      "fn": "upgrade",
+      "args": [
+        {
+          "name": "new_wasm_hash",
+          "shape": "bytes",
+          "value": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222"
+        }
+      ],
+      "signers": [
+        "mallory"
+      ],
+      "outcome": {
+        "status": "error",
+        "error": {
+          "class": "auth",
+          "hostError": "Auth(InvalidAction)",
+          "message": "Unauthorized function call for address"
+        }
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    },
+    {
+      "seq": 17,
+      "id": "attack-reinit",
+      "phase": "postUpgrade",
+      "fn": "initialize",
+      "args": [
+        {
+          "name": "admin",
+          "shape": "address",
+          "value": "mallory"
+        }
+      ],
+      "signers": [
+        "mallory"
+      ],
+      "outcome": {
+        "status": "error",
+        "error": {
+          "class": "contract",
+          "hostError": "Contract(1)",
+          "contractCode": 1,
+          "message": "failing with contract error"
+        }
+      },
+      "expectation": "met",
+      "observedAuth": [],
+      "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01"
+    }
+  ],
+  "checkpoints": {
+    "after:attack-old-no-auth": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "490"
+      }
+    },
+    "after:attack-reinit": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "after:attack-upgrade-no-auth": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "after:attack-upgrade-self-auth": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "after:p-alice-deposit": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "after:p-migrate-again": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "after:p-migrate-partial": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "after:p-migrate-rest": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "after:s-alice-1": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      }
+    },
+    "after:s-alice-2": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "490"
+      }
+    },
+    "after:s-bob": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "350"
+      }
+    },
+    "after:s-carol": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "425"
+      }
+    },
+    "after:s-dave": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "465"
+      }
+    },
+    "after:s-init": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": []
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      }
+    },
+    "after:upgrade": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "490"
+      }
+    },
+    "before:attack-old-no-auth": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "490"
+      }
+    },
+    "before:attack-reinit": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "before:attack-upgrade-no-auth": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "before:attack-upgrade-self-auth": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "before:p-alice-deposit": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "490"
+      }
+    },
+    "before:p-migrate-again": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "40",
+          "deposits": 0
+        }
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "before:p-migrate-partial": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "before:p-migrate-rest": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "175"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "175",
+          "deposits": 1
+        }
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "250",
+          "deposits": 0
+        }
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "map",
+        "value": {
+          "amount": "75",
+          "deposits": 0
+        }
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "540"
+      }
+    },
+    "before:s-alice-1": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": []
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      }
+    },
+    "before:s-alice-2": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "465"
+      }
+    },
+    "before:s-bob": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      }
+    },
+    "before:s-carol": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "350"
+      }
+    },
+    "before:s-dave": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "100"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "425"
+      }
+    },
+    "before:s-init": {
+      "admin": {
+        "ok": false,
+        "error": "contract: Contract(2) escalating error to VM trap from failed host function call: fail_with_error"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": []
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "0"
+      }
+    },
+    "before:upgrade": {
+      "admin": {
+        "ok": true,
+        "shape": "address",
+        "value": "admin"
+      },
+      "balance-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "balance-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "balance-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "balance-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "holders": {
+        "ok": true,
+        "shape": "vec",
+        "value": [
+          "alice",
+          "bob",
+          "carol",
+          "dave"
+        ]
+      },
+      "raw-legacy-alice": {
+        "ok": true,
+        "shape": "i128",
+        "value": "125"
+      },
+      "raw-legacy-bob": {
+        "ok": true,
+        "shape": "i128",
+        "value": "250"
+      },
+      "raw-legacy-carol": {
+        "ok": true,
+        "shape": "i128",
+        "value": "75"
+      },
+      "raw-legacy-dave": {
+        "ok": true,
+        "shape": "i128",
+        "value": "40"
+      },
+      "raw-v2-alice": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-bob": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-carol": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "raw-v2-dave": {
+        "ok": true,
+        "shape": "absent",
+        "value": null
+      },
+      "total-supply": {
+        "ok": true,
+        "shape": "i128",
+        "value": "490"
+      }
+    }
+  },
+  "authChecks": [
+    {
+      "invariant": "unauthorized-upgrade-rejected-old-contract",
+      "op": "attack-old-no-auth",
+      "signers": [],
+      "signatureScheme": "none",
+      "rejected": true,
+      "errorClass": "auth",
+      "executableUnchanged": true
+    },
+    {
+      "invariant": "unauthorized-upgrade-rejected-no-auth",
+      "op": "attack-upgrade-no-auth",
+      "signers": [],
+      "signatureScheme": "none",
+      "rejected": true,
+      "errorClass": "auth",
+      "executableUnchanged": true
+    },
+    {
+      "invariant": "unauthorized-upgrade-rejected-self-signed",
+      "op": "attack-upgrade-self-auth",
+      "signers": [
+        "mallory"
+      ],
+      "signatureScheme": "ed25519",
+      "rejected": true,
+      "errorClass": "auth",
+      "executableUnchanged": true
+    },
+    {
+      "invariant": "reinitialize-rejected",
+      "op": "attack-reinit",
+      "signers": [
+        "mallory"
+      ],
+      "signatureScheme": "ed25519",
+      "rejected": true,
+      "errorClass": "contract",
+      "executableUnchanged": true
+    }
+  ],
+  "invariants": [
+    {
+      "id": "seed-operations-succeeded",
+      "title": "Seed operations on the old WASM established the starting state",
+      "kind": "builtin",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "every seed operation succeeded",
+      "evidence": {
+        "failedSeedOps": []
+      },
+      "builtin": true
+    },
+    {
+      "id": "upgrade-applied",
+      "title": "The upgrade operation replaced the old WASM with the new WASM",
+      "kind": "builtin",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "executable changed from 95c189323f9e to 10248d4198fb",
+      "evidence": {
+        "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "executableBefore": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+        "expectedNew": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "expectedOld": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+        "upgradeOutcomeOk": true
+      },
+      "builtin": true
+    },
+    {
+      "id": "post-upgrade-operations-succeeded",
+      "title": "Operations expected to succeed after the upgrade (including migration calls) succeeded",
+      "kind": "builtin",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "all expected-ok post-upgrade operations succeeded",
+      "evidence": {
+        "failedOps": []
+      },
+      "builtin": true
+    },
+    {
+      "id": "balances-preserved-across-upgrade",
+      "title": "Every seeded balance, the total supply and the holder list are identical immediately before and after the upgrade",
+      "kind": "preserved",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "6 probe(s) identical between before:upgrade and after:upgrade",
+      "evidence": {
+        "from": "before:upgrade",
+        "rows": [
+          {
+            "equal": true,
+            "from": "125",
+            "probe": "balance-alice",
+            "to": "125"
+          },
+          {
+            "equal": true,
+            "from": "250",
+            "probe": "balance-bob",
+            "to": "250"
+          },
+          {
+            "equal": true,
+            "from": "75",
+            "probe": "balance-carol",
+            "to": "75"
+          },
+          {
+            "equal": true,
+            "from": "40",
+            "probe": "balance-dave",
+            "to": "40"
+          },
+          {
+            "equal": true,
+            "from": "490",
+            "probe": "total-supply",
+            "to": "490"
+          },
+          {
+            "equal": true,
+            "from": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "probe": "holders",
+            "to": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ]
+          }
+        ],
+        "to": "after:upgrade"
+      },
+      "builtin": false
+    },
+    {
+      "id": "admin-unchanged-across-upgrade",
+      "title": "The admin address is unchanged by the upgrade",
+      "kind": "preserved",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "1 probe(s) identical between before:upgrade and after:upgrade",
+      "evidence": {
+        "from": "before:upgrade",
+        "rows": [
+          {
+            "equal": true,
+            "from": "admin",
+            "probe": "admin",
+            "to": "admin"
+          }
+        ],
+        "to": "after:upgrade"
+      },
+      "builtin": false
+    },
+    {
+      "id": "supply-equals-sum-after-upgrade",
+      "title": "Total supply equals the sum of balances right after the upgrade",
+      "kind": "sumEquals",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "sum of 4 parts is 490, equal to total-supply (490)",
+      "evidence": {
+        "at": "after:upgrade",
+        "parts": [
+          {
+            "probe": "balance-alice",
+            "value": "125"
+          },
+          {
+            "probe": "balance-bob",
+            "value": "250"
+          },
+          {
+            "probe": "balance-carol",
+            "value": "75"
+          },
+          {
+            "probe": "balance-dave",
+            "value": "40"
+          }
+        ],
+        "sum": "490",
+        "total": {
+          "probe": "total-supply",
+          "value": "490"
+        }
+      },
+      "builtin": false
+    },
+    {
+      "id": "mixed-format-state-exercised",
+      "title": "Mixed-format state is really present: alice (touched after the upgrade) is in the new format, the others are still in the old format",
+      "kind": "shapes",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "8 storage shape(s) as expected at after:p-alice-deposit",
+      "evidence": {
+        "at": "after:p-alice-deposit",
+        "rows": [
+          {
+            "actual": "absent",
+            "expected": "absent",
+            "probe": "raw-legacy-alice",
+            "value": null
+          },
+          {
+            "actual": "i128",
+            "expected": "i128",
+            "probe": "raw-legacy-bob",
+            "value": "250"
+          },
+          {
+            "actual": "i128",
+            "expected": "i128",
+            "probe": "raw-legacy-carol",
+            "value": "75"
+          },
+          {
+            "actual": "i128",
+            "expected": "i128",
+            "probe": "raw-legacy-dave",
+            "value": "40"
+          },
+          {
+            "actual": "map",
+            "expected": "map",
+            "probe": "raw-v2-alice",
+            "value": {
+              "amount": "175",
+              "deposits": 1
+            }
+          },
+          {
+            "actual": "absent",
+            "expected": "absent",
+            "probe": "raw-v2-bob",
+            "value": null
+          },
+          {
+            "actual": "absent",
+            "expected": "absent",
+            "probe": "raw-v2-carol",
+            "value": null
+          },
+          {
+            "actual": "absent",
+            "expected": "absent",
+            "probe": "raw-v2-dave",
+            "value": null
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "mixed-format-balances-correct",
+      "title": "With old and new entries side by side, every balance reads back as the seed operations imply",
+      "kind": "expectedValues",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "5 value(s) match expectations at after:p-alice-deposit",
+      "evidence": {
+        "at": "after:p-alice-deposit",
+        "rows": [
+          {
+            "actual": "175",
+            "equal": true,
+            "expected": "175",
+            "probe": "balance-alice"
+          },
+          {
+            "actual": "250",
+            "equal": true,
+            "expected": "250",
+            "probe": "balance-bob"
+          },
+          {
+            "actual": "75",
+            "equal": true,
+            "expected": "75",
+            "probe": "balance-carol"
+          },
+          {
+            "actual": "40",
+            "equal": true,
+            "expected": "40",
+            "probe": "balance-dave"
+          },
+          {
+            "actual": "540",
+            "equal": true,
+            "expected": "540",
+            "probe": "total-supply"
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "partial-migration-preserves-balances",
+      "title": "After a partial (batched) migration every balance is still correct",
+      "kind": "expectedValues",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "5 value(s) match expectations at after:p-migrate-partial",
+      "evidence": {
+        "at": "after:p-migrate-partial",
+        "rows": [
+          {
+            "actual": "175",
+            "equal": true,
+            "expected": "175",
+            "probe": "balance-alice"
+          },
+          {
+            "actual": "250",
+            "equal": true,
+            "expected": "250",
+            "probe": "balance-bob"
+          },
+          {
+            "actual": "75",
+            "equal": true,
+            "expected": "75",
+            "probe": "balance-carol"
+          },
+          {
+            "actual": "40",
+            "equal": true,
+            "expected": "40",
+            "probe": "balance-dave"
+          },
+          {
+            "actual": "540",
+            "equal": true,
+            "expected": "540",
+            "probe": "total-supply"
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "seeded-balances-preserved-after-migration",
+      "title": "After the migration every seeded balance equals the value the seed operations imply",
+      "kind": "expectedValues",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "5 value(s) match expectations at after:p-migrate-rest",
+      "evidence": {
+        "at": "after:p-migrate-rest",
+        "rows": [
+          {
+            "actual": "175",
+            "equal": true,
+            "expected": "175",
+            "probe": "balance-alice"
+          },
+          {
+            "actual": "250",
+            "equal": true,
+            "expected": "250",
+            "probe": "balance-bob"
+          },
+          {
+            "actual": "75",
+            "equal": true,
+            "expected": "75",
+            "probe": "balance-carol"
+          },
+          {
+            "actual": "40",
+            "equal": true,
+            "expected": "40",
+            "probe": "balance-dave"
+          },
+          {
+            "actual": "540",
+            "equal": true,
+            "expected": "540",
+            "probe": "total-supply"
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "supply-equals-sum-after-migration",
+      "title": "Total supply equals the sum of balances after the migration",
+      "kind": "sumEquals",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "sum of 4 parts is 540, equal to total-supply (540)",
+      "evidence": {
+        "at": "after:p-migrate-rest",
+        "parts": [
+          {
+            "probe": "balance-alice",
+            "value": "175"
+          },
+          {
+            "probe": "balance-bob",
+            "value": "250"
+          },
+          {
+            "probe": "balance-carol",
+            "value": "75"
+          },
+          {
+            "probe": "balance-dave",
+            "value": "40"
+          }
+        ],
+        "sum": "540",
+        "total": {
+          "probe": "total-supply",
+          "value": "540"
+        }
+      },
+      "builtin": false
+    },
+    {
+      "id": "admin-unchanged-after-migration",
+      "title": "The admin address is unchanged after the whole upgrade and migration",
+      "kind": "preserved",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "1 probe(s) identical between before:upgrade and after:p-migrate-rest",
+      "evidence": {
+        "from": "before:upgrade",
+        "rows": [
+          {
+            "equal": true,
+            "from": "admin",
+            "probe": "admin",
+            "to": "admin"
+          }
+        ],
+        "to": "after:p-migrate-rest"
+      },
+      "builtin": false
+    },
+    {
+      "id": "migration-converts-every-entry",
+      "title": "After the migration no legacy entry remains and every holder has a new-format entry",
+      "kind": "shapes",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "8 storage shape(s) as expected at after:p-migrate-rest",
+      "evidence": {
+        "at": "after:p-migrate-rest",
+        "rows": [
+          {
+            "actual": "absent",
+            "expected": "absent",
+            "probe": "raw-legacy-alice",
+            "value": null
+          },
+          {
+            "actual": "absent",
+            "expected": "absent",
+            "probe": "raw-legacy-bob",
+            "value": null
+          },
+          {
+            "actual": "absent",
+            "expected": "absent",
+            "probe": "raw-legacy-carol",
+            "value": null
+          },
+          {
+            "actual": "absent",
+            "expected": "absent",
+            "probe": "raw-legacy-dave",
+            "value": null
+          },
+          {
+            "actual": "map",
+            "expected": "map",
+            "probe": "raw-v2-alice",
+            "value": {
+              "amount": "175",
+              "deposits": 1
+            }
+          },
+          {
+            "actual": "map",
+            "expected": "map",
+            "probe": "raw-v2-bob",
+            "value": {
+              "amount": "250",
+              "deposits": 0
+            }
+          },
+          {
+            "actual": "map",
+            "expected": "map",
+            "probe": "raw-v2-carol",
+            "value": {
+              "amount": "75",
+              "deposits": 0
+            }
+          },
+          {
+            "actual": "map",
+            "expected": "map",
+            "probe": "raw-v2-dave",
+            "value": {
+              "amount": "40",
+              "deposits": 0
+            }
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "migration-idempotent",
+      "title": "Calling migrate again changes nothing (balances, supply, admin, holders and raw storage)",
+      "kind": "stableAcrossOp",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "15 probe(s) unchanged across `p-migrate-again` (the call succeeded)",
+      "evidence": {
+        "op": "p-migrate-again",
+        "opOutcome": "ok",
+        "rows": [
+          {
+            "after": "175",
+            "before": "175",
+            "equal": true,
+            "probe": "balance-alice"
+          },
+          {
+            "after": "250",
+            "before": "250",
+            "equal": true,
+            "probe": "balance-bob"
+          },
+          {
+            "after": "75",
+            "before": "75",
+            "equal": true,
+            "probe": "balance-carol"
+          },
+          {
+            "after": "40",
+            "before": "40",
+            "equal": true,
+            "probe": "balance-dave"
+          },
+          {
+            "after": "540",
+            "before": "540",
+            "equal": true,
+            "probe": "total-supply"
+          },
+          {
+            "after": "admin",
+            "before": "admin",
+            "equal": true,
+            "probe": "admin"
+          },
+          {
+            "after": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "before": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "equal": true,
+            "probe": "holders"
+          },
+          {
+            "after": null,
+            "before": null,
+            "equal": true,
+            "probe": "raw-legacy-alice"
+          },
+          {
+            "after": null,
+            "before": null,
+            "equal": true,
+            "probe": "raw-legacy-bob"
+          },
+          {
+            "after": null,
+            "before": null,
+            "equal": true,
+            "probe": "raw-legacy-carol"
+          },
+          {
+            "after": null,
+            "before": null,
+            "equal": true,
+            "probe": "raw-legacy-dave"
+          },
+          {
+            "after": {
+              "amount": "175",
+              "deposits": 1
+            },
+            "before": {
+              "amount": "175",
+              "deposits": 1
+            },
+            "equal": true,
+            "probe": "raw-v2-alice"
+          },
+          {
+            "after": {
+              "amount": "250",
+              "deposits": 0
+            },
+            "before": {
+              "amount": "250",
+              "deposits": 0
+            },
+            "equal": true,
+            "probe": "raw-v2-bob"
+          },
+          {
+            "after": {
+              "amount": "75",
+              "deposits": 0
+            },
+            "before": {
+              "amount": "75",
+              "deposits": 0
+            },
+            "equal": true,
+            "probe": "raw-v2-carol"
+          },
+          {
+            "after": {
+              "amount": "40",
+              "deposits": 0
+            },
+            "before": {
+              "amount": "40",
+              "deposits": 0
+            },
+            "equal": true,
+            "probe": "raw-v2-dave"
+          }
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "unauthorized-upgrade-rejected-old-contract",
+      "title": "An unauthenticated upgrade of the old contract is rejected and the executable is unchanged",
+      "kind": "opRejected",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "`attack-old-no-auth` rejected (auth Auth(InvalidAction)); executable unchanged",
+      "evidence": {
+        "executableAfter": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+        "executableBefore": "95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222",
+        "op": "attack-old-no-auth",
+        "outcome": {
+          "error": {
+            "class": "auth",
+            "hostError": "Auth(InvalidAction)",
+            "message": "Unauthorized function call for address"
+          },
+          "status": "error"
+        },
+        "signers": []
+      },
+      "builtin": false
+    },
+    {
+      "id": "unauthorized-upgrade-rejected-no-auth",
+      "title": "An unauthenticated upgrade of the new contract is rejected and the executable is unchanged",
+      "kind": "opRejected",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "`attack-upgrade-no-auth` rejected (auth Auth(InvalidAction)); executable unchanged",
+      "evidence": {
+        "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "executableBefore": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "op": "attack-upgrade-no-auth",
+        "outcome": {
+          "error": {
+            "class": "auth",
+            "hostError": "Auth(InvalidAction)",
+            "message": "Unauthorized function call for address"
+          },
+          "status": "error"
+        },
+        "signers": []
+      },
+      "builtin": false
+    },
+    {
+      "id": "unauthorized-upgrade-rejected-self-signed",
+      "title": "An upgrade signed by a non-admin account is rejected and the executable is unchanged",
+      "kind": "opRejected",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "`attack-upgrade-self-auth` rejected (auth Auth(InvalidAction)); executable unchanged",
+      "evidence": {
+        "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "executableBefore": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "op": "attack-upgrade-self-auth",
+        "outcome": {
+          "error": {
+            "class": "auth",
+            "hostError": "Auth(InvalidAction)",
+            "message": "Unauthorized function call for address"
+          },
+          "status": "error"
+        },
+        "signers": [
+          "mallory"
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "reinitialize-rejected",
+      "title": "A repeated initialize by a stranger is rejected by the contract",
+      "kind": "opRejected",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "`attack-reinit` rejected (contract Contract(1)); executable unchanged",
+      "evidence": {
+        "executableAfter": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "executableBefore": "10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01",
+        "op": "attack-reinit",
+        "outcome": {
+          "error": {
+            "class": "contract",
+            "contractCode": 1,
+            "hostError": "Contract(1)",
+            "message": "failing with contract error"
+          },
+          "status": "error"
+        },
+        "signers": [
+          "mallory"
+        ]
+      },
+      "builtin": false
+    },
+    {
+      "id": "reinitialize-changes-nothing",
+      "title": "A repeated initialize leaves admin, supply, holders and balances untouched",
+      "kind": "stableAcrossOp",
+      "status": "pass",
+      "category": "compiled-wasm",
+      "summary": "15 probe(s) unchanged across `attack-reinit` (the call was rejected)",
+      "evidence": {
+        "op": "attack-reinit",
+        "opOutcome": "error",
+        "rows": [
+          {
+            "after": "175",
+            "before": "175",
+            "equal": true,
+            "probe": "balance-alice"
+          },
+          {
+            "after": "250",
+            "before": "250",
+            "equal": true,
+            "probe": "balance-bob"
+          },
+          {
+            "after": "75",
+            "before": "75",
+            "equal": true,
+            "probe": "balance-carol"
+          },
+          {
+            "after": "40",
+            "before": "40",
+            "equal": true,
+            "probe": "balance-dave"
+          },
+          {
+            "after": "540",
+            "before": "540",
+            "equal": true,
+            "probe": "total-supply"
+          },
+          {
+            "after": "admin",
+            "before": "admin",
+            "equal": true,
+            "probe": "admin"
+          },
+          {
+            "after": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "before": [
+              "alice",
+              "bob",
+              "carol",
+              "dave"
+            ],
+            "equal": true,
+            "probe": "holders"
+          },
+          {
+            "after": null,
+            "before": null,
+            "equal": true,
+            "probe": "raw-legacy-alice"
+          },
+          {
+            "after": null,
+            "before": null,
+            "equal": true,
+            "probe": "raw-legacy-bob"
+          },
+          {
+            "after": null,
+            "before": null,
+            "equal": true,
+            "probe": "raw-legacy-carol"
+          },
+          {
+            "after": null,
+            "before": null,
+            "equal": true,
+            "probe": "raw-legacy-dave"
+          },
+          {
+            "after": {
+              "amount": "175",
+              "deposits": 1
+            },
+            "before": {
+              "amount": "175",
+              "deposits": 1
+            },
+            "equal": true,
+            "probe": "raw-v2-alice"
+          },
+          {
+            "after": {
+              "amount": "250",
+              "deposits": 0
+            },
+            "before": {
+              "amount": "250",
+              "deposits": 0
+            },
+            "equal": true,
+            "probe": "raw-v2-bob"
+          },
+          {
+            "after": {
+              "amount": "75",
+              "deposits": 0
+            },
+            "before": {
+              "amount": "75",
+              "deposits": 0
+            },
+            "equal": true,
+            "probe": "raw-v2-carol"
+          },
+          {
+            "after": {
+              "amount": "40",
+              "deposits": 0
+            },
+            "before": {
+              "amount": "40",
+              "deposits": 0
+            },
+            "equal": true,
+            "probe": "raw-v2-dave"
+          }
+        ]
+      },
+      "builtin": false
+    }
+  ],
+  "verdict": {
+    "status": "pass",
+    "passed": 19,
+    "failed": 0,
+    "inconclusive": 0
+  },
+  "limits": [
+    "Not a network: the compiled WASM runs in the Soroban host linked into this runner (soroban-sdk testutils Env). There is no consensus, no fees, no transaction envelope, no state archival or restore, and the host's protocol version may differ from the live network's.",
+    "Authorization is enforced with real ed25519 signatures over the standard payload for single-key accounts only; multi-signer accounts, thresholds and custom account contracts are not exercised.",
+    "State comes from the seed operations you wrote. Live ledger state is never cloned or fetched, and storage keys are not discovered: only the probes you name are read.",
+    "A pass means the named invariants held for this scenario's operations. It is not a proof that the migration is safe for all states or inputs, and not an audit.",
+    "Results from native SDK tests (if attached) are a different category from compiled-WASM execution and are never merged with it."
+  ]
+}

@@ -1,0 +1,103 @@
+UpgradeLab report v1: vault-broken-reinit
+mode: in-process-host | runner 0.1.0 | soroban-sdk 28.0.0 | host protocol 28
+old wasm: fixtures/wasm/vault_v1.wasm sha256 95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222
+new wasm: fixtures/wasm/vault_v2_broken_reinit.wasm sha256 d53ab196b0e49478664218bee9f96922e6344f5e97fa8a06a9028c0f5a7e6a23
+scenario sha256: 4e98bb8dc3508a2c661d0a80f33279995c4ed7163b60e843708f045dab2e3177
+
+Execution categories (reported separately):
+  [executed] compiled-wasm: Compiled WASM in the in-process Soroban host
+  [not-run] native-sdk: Native SDK tests (Rust, mocked auth, not the VM)
+  [not-run] testnet-rpc: Stellar testnet
+
+Executed operations:
+   1. [system] deploy-old register_wasm(wasmSha256="95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222") unsigned => ok
+   2. [system] upload-new upload_contract_wasm(wasmSha256="d53ab196b0e49478664218bee9f96922e6344f5e97fa8a06a9028c0f5a7e6a23") unsigned => ok
+   3. [seed] s-init initialize(admin="admin") signed by admin => ok
+   4. [seed] s-alice-1 deposit(from="alice", amount="100") signed by alice => ok
+   5. [seed] s-bob deposit(from="bob", amount="250") signed by bob => ok
+   6. [seed] s-carol deposit(from="carol", amount="75") signed by carol => ok
+   7. [seed] s-dave deposit(from="dave", amount="40") signed by dave => ok
+   8. [seed] s-alice-2 deposit(from="alice", amount="25") signed by alice => ok
+   9. [seed] attack-old-no-auth upgrade(new_wasm_hash="d53ab196b0e49478664218bee9f96922e6344f5e97fa8a06a9028c0f5a7e6a23") unsigned => ERROR auth Auth(InvalidAction) Unauthorized function call for address
+  10. [upgrade] upgrade upgrade(new_wasm_hash="d53ab196b0e49478664218bee9f96922e6344f5e97fa8a06a9028c0f5a7e6a23") signed by admin => ok
+  11. [postUpgrade] p-alice-deposit deposit(from="alice", amount="50") signed by alice => ok
+  12. [postUpgrade] p-migrate-partial migrate(limit=2) signed by admin => ok -> 1
+  13. [postUpgrade] p-migrate-rest migrate(limit=10) signed by admin => ok -> 0
+  14. [postUpgrade] p-migrate-again migrate(limit=10) signed by admin => ok -> 0
+  15. [postUpgrade] attack-upgrade-no-auth upgrade(new_wasm_hash="95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222") unsigned => ERROR auth Auth(InvalidAction) Unauthorized function call for address
+  16. [postUpgrade] attack-upgrade-self-auth upgrade(new_wasm_hash="95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222") signed by mallory => ERROR auth Auth(InvalidAction) Unauthorized function call for address
+  17. [postUpgrade] attack-reinit initialize(admin="mallory") signed by mallory => ok
+
+Invariants:
+  PASS         seed-operations-succeeded (built-in)
+               Seed operations on the old WASM established the starting state
+               every seed operation succeeded
+  PASS         upgrade-applied (built-in)
+               The upgrade operation replaced the old WASM with the new WASM
+               executable changed from 95c189323f9e to d53ab196b0e4
+  PASS         post-upgrade-operations-succeeded (built-in)
+               Operations expected to succeed after the upgrade (including migration calls) succeeded
+               all expected-ok post-upgrade operations succeeded
+  PASS         balances-preserved-across-upgrade
+               Every seeded balance, the total supply and the holder list are identical immediately before and after the upgrade
+               6 probe(s) identical between before:upgrade and after:upgrade
+  PASS         admin-unchanged-across-upgrade
+               The admin address is unchanged by the upgrade
+               1 probe(s) identical between before:upgrade and after:upgrade
+  PASS         supply-equals-sum-after-upgrade
+               Total supply equals the sum of balances right after the upgrade
+               sum of 4 parts is 490, equal to total-supply (490)
+  PASS         mixed-format-state-exercised
+               Mixed-format state is really present: alice (touched after the upgrade) is in the new format, the others are still in the old format
+               8 storage shape(s) as expected at after:p-alice-deposit
+  PASS         mixed-format-balances-correct
+               With old and new entries side by side, every balance reads back as the seed operations imply
+               5 value(s) match expectations at after:p-alice-deposit
+  PASS         partial-migration-preserves-balances
+               After a partial (batched) migration every balance is still correct
+               5 value(s) match expectations at after:p-migrate-partial
+  PASS         seeded-balances-preserved-after-migration
+               After the migration every seeded balance equals the value the seed operations imply
+               5 value(s) match expectations at after:p-migrate-rest
+  PASS         supply-equals-sum-after-migration
+               Total supply equals the sum of balances after the migration
+               sum of 4 parts is 540, equal to total-supply (540)
+  PASS         admin-unchanged-after-migration
+               The admin address is unchanged after the whole upgrade and migration
+               1 probe(s) identical between before:upgrade and after:p-migrate-rest
+  PASS         migration-converts-every-entry
+               After the migration no legacy entry remains and every holder has a new-format entry
+               8 storage shape(s) as expected at after:p-migrate-rest
+  PASS         migration-idempotent
+               Calling migrate again changes nothing (balances, supply, admin, holders and raw storage)
+               15 probe(s) unchanged across `p-migrate-again` (the call succeeded)
+  PASS         unauthorized-upgrade-rejected-old-contract
+               An unauthenticated upgrade of the old contract is rejected and the executable is unchanged
+               `attack-old-no-auth` rejected (auth Auth(InvalidAction)); executable unchanged
+  PASS         unauthorized-upgrade-rejected-no-auth
+               An unauthenticated upgrade of the new contract is rejected and the executable is unchanged
+               `attack-upgrade-no-auth` rejected (auth Auth(InvalidAction)); executable unchanged
+  PASS         unauthorized-upgrade-rejected-self-signed
+               An upgrade signed by a non-admin account is rejected and the executable is unchanged
+               `attack-upgrade-self-auth` rejected (auth Auth(InvalidAction)); executable unchanged
+  FAIL         reinitialize-rejected
+               A repeated initialize by a stranger is rejected by the contract
+               `attack-reinit` was ACCEPTED (signers: mallory); it should have been rejected
+  FAIL         reinitialize-changes-nothing
+               A repeated initialize leaves admin, supply, holders and balances untouched
+               `attack-reinit` changed state: total-supply changed from 540 to 0; admin changed from admin to mallory; holders changed from ["alice","bob","carol","dave"] to []
+
+Authorization checks:
+  op attack-old-no-auth signers [] rejected=true class=auth executableUnchanged=true
+  op attack-upgrade-no-auth signers [] rejected=true class=auth executableUnchanged=true
+  op attack-upgrade-self-auth signers [mallory] rejected=true class=auth executableUnchanged=true
+  op attack-reinit signers [mallory] rejected=false class=- executableUnchanged=true
+
+Verdict: FAIL (17 passed, 2 failed, 0 inconclusive)
+
+What this does not show:
+  - Not a network: the compiled WASM runs in the Soroban host linked into this runner (soroban-sdk testutils Env). There is no consensus, no fees, no transaction envelope, no state archival or restore, and the host's protocol version may differ from the live network's.
+  - Authorization is enforced with real ed25519 signatures over the standard payload for single-key accounts only; multi-signer accounts, thresholds and custom account contracts are not exercised.
+  - State comes from the seed operations you wrote. Live ledger state is never cloned or fetched, and storage keys are not discovered: only the probes you name are read.
+  - A pass means the named invariants held for this scenario's operations. It is not a proof that the migration is safe for all states or inputs, and not an audit.
+  - Results from native SDK tests (if attached) are a different category from compiled-WASM execution and are never merged with it.
