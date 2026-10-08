@@ -6,7 +6,10 @@ rust-version = "1.90"
 license = "MIT"
 authors = ["Anas Abubakar"]
 description = "Executable Soroban migration rehearsal: runs the compiled old and new WASM in the Soroban host, upgrades, migrates and evaluates named invariants."
-publish = false
+repository = "https://github.com/Anasabubakar/upgradelab-runner"
+readme = "README.md"
+keywords = ["soroban", "stellar", "upgrade", "migration", "testing"]
+categories = ["development-tools::testing"]
 default-run = "upgradelab"
 
 [lib]
