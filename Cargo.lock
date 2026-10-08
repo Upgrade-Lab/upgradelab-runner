@@ -2035,7 +2035,7 @@ checksum = "d245f478577f809a851594d02313b640fb437e0bb33866753cff937863096954"
 
 [[package]]
 name = "upgradelab-runner"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "ed25519-dalek",
