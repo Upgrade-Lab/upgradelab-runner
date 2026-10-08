@@ -1,5 +1,5 @@
 UpgradeLab report v1: vault-correct
-mode: in-process-host | runner 0.1.0 | soroban-sdk 28.0.0 | host protocol 28
+mode: in-process-host | runner 0.1.1 | soroban-sdk 28.0.0 | host protocol 28
 old wasm: fixtures/wasm/vault_v1.wasm sha256 95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222
 new wasm: fixtures/wasm/vault_v2_correct.wasm sha256 10248d4198fbe3fab6bdbb159806bd887c57d9513f96185107dc7e464e65db01
 scenario sha256: 2f6ef5a44d4ce9e66a8ce8c1de30e05f16a4ad91ecd8b8cd1cea7d35c6e62efa

@@ -1,5 +1,5 @@
 UpgradeLab report v1: vault-broken-lose-balance
-mode: in-process-host | runner 0.1.0 | soroban-sdk 28.0.0 | host protocol 28
+mode: in-process-host | runner 0.1.1 | soroban-sdk 28.0.0 | host protocol 28
 old wasm: fixtures/wasm/vault_v1.wasm sha256 95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222
 new wasm: fixtures/wasm/vault_v2_broken_lose_balance.wasm sha256 6abf198abe1d54bc20b5f98eb0b88da57f8a1ebad5939ecf12adbdea9ccea5ee
 scenario sha256: 7d31070be9112573f40ad96e7da8b1809a85e1bde5a03ff6c83be826297e4d48

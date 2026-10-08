@@ -1,5 +1,5 @@
 UpgradeLab report v1: vault-broken-not-idempotent
-mode: in-process-host | runner 0.1.0 | soroban-sdk 28.0.0 | host protocol 28
+mode: in-process-host | runner 0.1.1 | soroban-sdk 28.0.0 | host protocol 28
 old wasm: fixtures/wasm/vault_v1.wasm sha256 95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222
 new wasm: fixtures/wasm/vault_v2_broken_not_idempotent.wasm sha256 3e989d16b96c1a3a8eb6fbf9e73dfe320f49cb73d3f66cf782ae4e1729d397c2
 scenario sha256: 7b30fd756ab4138bf531558eeb74b35d0835befe9d9f5636418b4a9293e4392e

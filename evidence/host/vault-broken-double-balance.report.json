@@ -3,7 +3,7 @@
   "kind": "upgradelab-report",
   "tool": {
     "name": "upgradelab-runner",
-    "runnerVersion": "0.1.0",
+    "runnerVersion": "0.1.1",
     "sorobanSdk": "28.0.0",
     "hostProtocol": 28,
     "mode": "in-process-host",

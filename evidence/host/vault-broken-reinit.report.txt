@@ -1,5 +1,5 @@
 UpgradeLab report v1: vault-broken-reinit
-mode: in-process-host | runner 0.1.0 | soroban-sdk 28.0.0 | host protocol 28
+mode: in-process-host | runner 0.1.1 | soroban-sdk 28.0.0 | host protocol 28
 old wasm: fixtures/wasm/vault_v1.wasm sha256 95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222
 new wasm: fixtures/wasm/vault_v2_broken_reinit.wasm sha256 d53ab196b0e49478664218bee9f96922e6344f5e97fa8a06a9028c0f5a7e6a23
 scenario sha256: 4e98bb8dc3508a2c661d0a80f33279995c4ed7163b60e843708f045dab2e3177

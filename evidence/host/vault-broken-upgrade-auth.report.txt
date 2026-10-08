@@ -1,5 +1,5 @@
 UpgradeLab report v1: vault-broken-upgrade-auth
-mode: in-process-host | runner 0.1.0 | soroban-sdk 28.0.0 | host protocol 28
+mode: in-process-host | runner 0.1.1 | soroban-sdk 28.0.0 | host protocol 28
 old wasm: fixtures/wasm/vault_v1.wasm sha256 95c189323f9e4bcb7e903c84e28fe65d1b207fbf00db1af5d19c7493c2257222
 new wasm: fixtures/wasm/vault_v2_broken_upgrade_auth.wasm sha256 20fbe6059e42d29e6c11de1f399fad3f8a0822c22232122749120544c3efe725
 scenario sha256: 97826e3adb98ca502ac287c2692275e9896ff9a33563799a820806151a9b4c36
