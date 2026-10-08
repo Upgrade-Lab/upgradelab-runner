@@ -406,7 +406,7 @@ impl Backend for TestnetBackend {
     }
 
     fn executable_hash(&mut self) -> Option<String> {
-        let path = self.scratch.join(format!("upgradelab-fetch-{}.wasm", &self.contract_id));
+        let path = self.scratch.join(format!("upgradelab-fetch-{}.wasm", self.contract_id));
         let p = path.to_string_lossy().to_string();
         let o =
             cli(&self.bin, &["contract", "fetch", "--id", &self.contract_id, "--network", NETWORK, "--out-file", &p])
