@@ -92,6 +92,6 @@ Recorded run (`evidence/testnet/`): contract `CC6TBNXUS5NFBKDPEULVFXB4ORDYRYN6JR
 - The vault is a teaching fixture, not an audited contract. No contract-security expert has reviewed the invariants.
 
 ## Status
-v0.1.0, published on GitHub (CI green) and crates.io. Engineering complete for the declared scope; no outside review of the invariants.
+v0.1.1, published on GitHub (CI green) and crates.io. Engineering complete for the declared scope; no outside review of the invariants.
 
 MIT licensed.
