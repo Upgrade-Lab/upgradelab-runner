@@ -4,7 +4,7 @@ Published on crates.io: `cargo install upgradelab-runner`.
 
 Rehearse the upgrade using the state your application depends on.
 
-A Soroban migration can compile, pass its own unit tests and still lose a balance, double one, let anyone call `initialize` again, or leave the upgrade function unguarded. UpgradeLab runs the **actual compiled old and new WASM**, seeded with the calls **you** write, performs the real `update_current_contract_wasm` upgrade and your migration calls, then judges **named invariants** over the state it reads back, and writes a **replayable report**. The companion viewer is [upgradelab-studio](../upgradelab-studio) (a separate repo).
+A Soroban migration can compile, pass its own unit tests and still lose a balance, double one, let anyone call `initialize` again, or leave the upgrade function unguarded. UpgradeLab runs the **actual compiled old and new WASM**, seeded with the calls **you** write, performs the real `update_current_contract_wasm` upgrade and your migration calls, then judges **named invariants** over the state it reads back, and writes a **replayable report**. The companion viewer is [upgradelab-studio](https://github.com/Anasabubakar/upgradelab-runner/blob/main/upgradelab-studio) (a separate repo).
 
 ## What a run looks like
 
@@ -41,7 +41,7 @@ Also exercised by the corrected build: **mixed-format state** (some entries old,
 | `testnet-rpc` | Real transactions on Stellar testnet via the Stellar CLI (opt-in `upgradelab testnet`) | separate report, own limits |
 | `native-sdk` | Contract Rust compiled natively, mocked auth (`cargo test` in `fixtures/contracts`). The runner **never executes these**; `--native-log` records a log you supply, labeled `recorded-input` | listed beside, never merged into invariants |
 
-Why the in-process host: Docker is unavailable here, so `stellar network container` is not an option. See [ADR 0002](docs/adr/0002-in-process-host-and-opt-in-testnet.md).
+Why the in-process host: Docker is unavailable here, so `stellar network container` is not an option. See [ADR 0002](https://github.com/Anasabubakar/upgradelab-runner/blob/main/docs/adr/0002-in-process-host-and-opt-in-testnet.md).
 
 ### Authorization is enforced, not mocked
 `mock_all_auths` and `mock_auths` are never called (a test greps the source). A new host environment has no authorization entries, so `require_auth` fails. For each call the runner builds `SorobanAuthorizationEntry` values for the accounts the scenario names, signs the standard preimage with ed25519 and installs them with `Env::set_auths`; the host verifies the signature against the account's ledger entry and consumes the nonce. Tests show: no entry fails, a signature by the wrong key fails, a signature over other arguments fails, a replayed nonce fails. **Not covered:** multi-signer accounts and thresholds, custom account contracts, how a wallet builds an entry.
@@ -88,7 +88,7 @@ Recorded run (`evidence/testnet/`): contract `CC6TBNXUS5NFBKDPEULVFXB4ORDYRYN6JR
 - No cloning of live ledger state and no discovery of storage keys: state comes from your seed operations and probes read only what they name.
 - No claim of exhaustive safety. A pass means the named invariants held in this scenario in this host.
 - No fees, resource limits as a network enforces them, state archival or restore (entries do not expire during a run; balances in the fixture are persistent, never temporary), and the host protocol (28) can differ from the live network (testnet was 29).
-- Not a static analyzer (use soroban-upgrade-safeguard for interface/layout diffs) and not a test library (Crucible); see [ADR 0001](docs/adr/0001-incremental-value-over-existing-tools.md).
+- Not a static analyzer (use soroban-upgrade-safeguard for interface/layout diffs) and not a test library (Crucible); see [ADR 0001](https://github.com/Anasabubakar/upgradelab-runner/blob/main/docs/adr/0001-incremental-value-over-existing-tools.md).
 - The vault is a teaching fixture, not an audited contract. No contract-security expert has reviewed the invariants.
 
 ## Status
