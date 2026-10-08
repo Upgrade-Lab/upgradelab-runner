@@ -1,5 +1,7 @@
 # upgradelab-runner
 
+**Documentation:** https://stellar-developer-tools.gitbook.io/upgradelab-runner/
+
 Published on crates.io: `cargo install upgradelab-runner`.
 
 Rehearse the upgrade using the state your application depends on.
