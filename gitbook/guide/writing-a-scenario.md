@@ -1,0 +1,3 @@
+# Writing a scenario
+
+A scenario (`schema/scenario.v1.schema.json`) is JSON you own: accounts by name, `ops` in order (seed ops on old WASM, exactly one `upgrade: true` op, post-upgrade ops), `probes` (a view call, or a raw ledger entry by durability + key) read before and after every op, and `invariants` over the readouts: `preserved`, `sumEquals`, `expectedValues`, `shapes`, `stableAcrossOp`, `opRejected`, `opSucceeded`. Expected values must come from your seed operations, not from the contract. See `scenarios/vault-correct.json`. Failed reads make an invariant `inconclusive`; they are never a pass or a mismatch.
